@@ -197,30 +197,24 @@ def fee_notes(lab, d, sw, rs, px):
     peak, at85 = fee_curve(0.5, r) * 100, fee_curve(0.85, r) * 100
     by = {x["m"]: x for x in sw}
     two = by.get(2.0)
-    out = [f"The fee is shares x rate x p x (1 - p) on every taker fill, the rate the market's own ({SRC_FORMULA}; the crypto category's published taker rate "
-           f"{CARD_CRYPTO_TAKER:g}, {SRC_CATEGORY}). The engine charged {rates_text(rs)}; test {lab}'s entries paid {r:g}. At {r:g} the fee peaks at "
-           f"{peak:.2f} cents a share at p = 0.50 and is {at85:.2f} c at p = 0.85.",
-           f"The fee costs {d['fee']:.3f} USD an entry (95% by slot {d['fee_lo']:.3f} to {d['fee_hi']:.3f}), {d['fee_c']:.2f} cents a share over {d['n']:,} entries."]
+    out = []
     if d["gross"] > 0:
-        out.append(f"Before the fee test {lab} makes {d['gross']:+.3f} an entry (95% {d['gross_lo']:+.2f} to {d['gross_hi']:+.2f}); the fee takes {d['fee_share']:.0%} of it "
-                   f"and leaves {d['net']:+.3f} (95% {d['net_lo']:+.2f} to {d['net_hi']:+.2f}).")
-        out.append(f"The mean net crosses zero at {d['be_mult']:.2f}x today's rate, a rate of {d['be_rate']:.3f}"
-                   + (f"; at twice the rate ({2 * r:.2f}) the net is {two['per']:+.3f} an entry (95% {two['lo']:+.2f} to {two['hi']:+.2f}), "
-                      + ("so no cost cell up to 2x flips the sign (gate 2's cost sweep)." if two["per"] > 0 else "so the sign flips inside the sweep (gate 2's cost sweep fails).") if two else "."))
+        out.append(f"The fee takes {d['fee_share']:.0%} of test {lab}'s profit: {d['gross']:+.3f} USD an entry before the fee (95% {d['gross_lo']:+.2f} to {d['gross_hi']:+.2f}), "
+                   f"{d['net']:+.3f} after it (95% {d['net_lo']:+.2f} to {d['net_hi']:+.2f}).")
+        out.append(f"The net crosses zero at {d['be_mult']:.2f}x today's rate, a rate of {d['be_rate']:.3f}"
+                   + (f"; at twice the rate ({2 * r:.2f}) it is {two['per']:+.3f} an entry (95% {two['lo']:+.2f} to {two['hi']:+.2f}), "
+                      + ("still above zero." if two["per"] > 0 else "below zero.") if two else "."))
     else:
-        out.append(f"Before the fee test {lab} already makes {d['gross']:+.3f} an entry (95% {d['gross_lo']:+.2f} to {d['gross_hi']:+.2f}), so no fee is bearable; the fee "
-                   f"adds {d['fee']:.3f} to the loss and the net is {d['net']:+.3f}.")
+        out.append(f"There is no profit for the fee to take: test {lab} makes {d['gross']:+.3f} USD an entry before the fee (95% {d['gross_lo']:+.2f} to {d['gross_hi']:+.2f}), "
+                   f"the fee adds {d['fee']:.3f} and the net is {d['net']:+.3f}.")
+    out.append(f"The fee costs {d['fee']:.3f} USD an entry (95% by slot {d['fee_lo']:.3f} to {d['fee_hi']:.3f}), {d['fee_c']:.2f} cents a share over {d['n']:,} entries.")
+    out.append(f"Fee = shares x rate x p x (1 - p) on every taker fill ({SRC_FORMULA}; the crypto category's published rate {CARD_CRYPTO_TAKER:g}, {SRC_CATEGORY}). "
+               f"The engine charged {rates_text(rs)}; test {lab} paid {r:g}. At {r:g} the fee peaks at {peak:.2f} cents a share at p = 0.50 and is {at85:.2f} c at p = 0.85.")
     full = [x for x in px if x["n"] >= 20]
     if full:
         top = max(full, key=lambda x: x["fee"])
         out.append(f"The fee bites hardest in the {top['bucket']} bucket ({top['n']:,} entries, {top['fee']:.2f} c a share): gross {top['gross']:+.2f} c, net {top['net']:+.2f} c a share"
                    + (", so the edge there survives the fee." if top["net"] > 0 else ", so the fee eats the edge there." if top["gross"] > 0 else ", already below zero before the fee."))
-    if d["gross"] <= 0:
-        out.append(f"Test {lab} loses to the price, not the fee: it is below zero before any fee is charged.")
-    elif d["net"] <= 0:
-        out.append(f"Test {lab} loses to the fee: it is above zero before the fee ({d['gross']:+.3f}) and below after it ({d['net']:+.3f}); a rate under {d['be_rate']:.3f} would keep it.")
-    else:
-        out.append(f"Test {lab} keeps {d['net_share']:.0%} of its gross after the fee; the fee is a cost it bears, not what decides it.")
     return out
 
 

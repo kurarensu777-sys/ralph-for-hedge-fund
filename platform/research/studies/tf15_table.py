@@ -2,7 +2,8 @@
 
 Every candidate strategy of the search is a rule over THIS table, so a candidate costs seconds, not an archive read. The table holds, for each window and each
 whole second k (5 s after the start to 5 s before the end):
-    S, z, sig, pu, zl10/30/60   the Binance state as of t (the trade-implied mid, the same causal features as the 15-minute study) and the Brownian TWAP fair value
+    S, z, sig, pu, zl10/30/60   the Binance state as of t (the trade-implied mid, the same causal features as the 15-minute study) and the Brownian TWAP fair value;
+                                from CODE tf15-2026-10-11b the fair value's start reference is the venue's published price to beat (THE REFERENCE)
     qb, qa, qbs, qas            the Up book's best bid / ask and sizes as of t + decide_ms (what the trader sees when it learns of the Binance print at t)
     age                         ms from the gate's book row to t + decide_ms (-1 where no row yet)
     lad[., ., 4, L]             the Up ladder as of t + fill_ms: bid px, bid size, ask px, ask size, L levels, best first (the fill)
@@ -16,6 +17,17 @@ after its own latency, decides on the book as it stands THEN, and its order meet
 t + decide_ms (own latency) and the fill reads the ladder at t + fill_ms = t + decide_ms + VENUE_HOLD_MS. decide_ms 0 is the old table (gate at the print
 itself), seated under CODE_V0 and never rebuilt; decide_ms > 0 is seated under CODE (`tf15_runner.key_of` names both delays).
 
+THE REFERENCE (the owner, 2026-10-11). Every fair value uses the venue's own price to beat (`r["price_to_beat"]`, the published Chainlink start price the market
+settles against) as its start reference, never our Binance start TWAP; the price stream (S, known_sum, sigma, the z features) stays Binance. A window with
+no published price to beat is w_status 3 ("no reference"), counted in the day meta as `no_reference`, never kept. `w_a0` (the Binance start TWAP) stays
+stored for the diagnostic. ref "a0" is the 2026-10-11a table (gate at t + decide_ms, the Binance reference), kept and never rebuilt.
+
+THE BASIS (the owner, 2026-10-11, table c, ref "ptbb"). The price to beat sits a level under Binance (USDT), so a Binance stream against it biases P(Up). Table c
+converts the stream into the reference's terms: `tf15_fv.pu_twap(S, known, sig, T, a_ref=price_to_beat, basis=b)`, b per coin = the median of
+ln(Binance 60 s TWAP at the open / price to beat) over the PREVIOUS UTC day's windows of that coin (causal: nothing of the day itself). The Binance grid of a
+day already spans the previous day (`updown15_day.build_assets`), so only the previous day's market rows are needed; without them the day's own first 12 hours
+are used and the meta says so ([U]). `w_basis` stores the basis applied per window in bp; the meta holds `basis` {coin: bp, n} and `basis_source`.
+
 SOURCES are injected exactly as in `updown15_day` (`Sources` of `updown15_runner`): no file or network call lives here.
 """
 from __future__ import annotations
@@ -27,8 +39,12 @@ import numpy as np
 import updown15_day as D
 import updown15_run as R
 
-CODE = "tf15-2026-10-11a"            # the gate read at t + decide_ms (decide_ms > 0)
+CODE = "tf15-2026-10-11c"            # the gate at t + decide_ms, the fair value against the price to beat with the stream converted by the previous day's basis
+CODE_B = "tf15-2026-10-11b"            # the gate at t + decide_ms, the fair value against the price to beat, no basis (kept, never rebuilt)
+CODE_A = "tf15-2026-10-11a"          # the gate read at t + decide_ms, the fair value against the Binance start TWAP (kept, never rebuilt)
 CODE_V0 = "tf15-2026-10-08b"          # the gate read at t (decide_ms 0): the tables seated before 2026-10-11, same derivation
+REFS = ("ptbb", "ptb", "a0")          # the start reference: the price to beat with the basis removed (c), the price to beat (b), the Binance start TWAP (a)
+BASIS_OWN_HOURS = 12                  # the fallback when the previous day's market rows are missing: the day's own first 12 hours [U]
 DATASET = "tf15-table"
 K0, K1 = 5, 895                      # first and last decision second of a window
 NK = K1 - K0 + 1
@@ -51,8 +67,41 @@ def _ladder_at(book: R.Book, t: np.ndarray):
     return np.stack(out), i
 
 
-def code_of(decide_ms: int) -> str:
-    return CODE_V0 if int(decide_ms) == 0 else CODE
+def code_of(decide_ms: int, ref: str = "ptb") -> str:
+    assert ref in REFS, ref
+    if int(decide_ms) == 0:
+        return CODE_V0
+    return {"ptbb": CODE, "ptb": CODE_B, "a0": CODE_A}[ref]
+
+
+def basis_of(rows, assets) -> dict:
+    """{coin: (median ln(Binance 60 s TWAP at the open / price to beat), windows used)} over `rows` with a published price to beat whose open sits on the
+    Binance grid of `assets` (log units; a coin with no usable window is absent)."""
+    out = {}
+    for a in D.ASSETS:
+        v = []
+        for r in rows:
+            if r.get("asset") != a or not has_ref(r):
+                continue
+            try:
+                a0, _, _ = assets[a]["mid"].window_refs(r["start_ms"])
+            except (AssertionError, IndexError, KeyError):
+                continue
+            if a0 > 0:
+                v.append(np.log(a0 / float(r["price_to_beat"])))
+        if v:
+            out[a] = (float(np.median(v)), len(v))
+    return out
+
+
+def ref_of(decide_ms: int, ref: str = "ptb") -> str:
+    """The reference a table at this clock actually uses: the old tables (decide 0) are on the Binance start TWAP whatever is asked."""
+    return "a0" if int(decide_ms) == 0 else ref
+
+
+def has_ref(r: dict) -> bool:
+    v = r.get("price_to_beat")
+    return v is not None and np.isfinite(float(v)) and float(v) > 0
 
 
 def _gate_at(book: R.Book, t: np.ndarray, decide_ms: int = 0):
@@ -69,13 +118,21 @@ def _gate_at(book: R.Book, t: np.ndarray, decide_ms: int = 0):
     return qb, qa, qbs, qas, age
 
 
-def derive_window(A: R.Asset, book: R.Book, r: dict, a0: float, st: dict, fill_ms: int = FILL_MS, decide_ms: int = 0):
-    """One window -> dict of arrays (NK,...). The Binance features at t, the gate's book at t + decide_ms, the fill's ladder at t + fill_ms."""
+def derive_window(A: R.Asset, book: R.Book, r: dict, a0: float, st: dict, fill_ms: int = FILL_MS, decide_ms: int = 0, ref: str = "a0"):
+    """One window -> dict of arrays (NK,...). The Binance features at t, the gate's book at t + decide_ms, the fill's ladder at t + fill_ms; the fair value
+    against the venue's price to beat (ref "ptb") or the Binance start TWAP a0 (ref "a0")."""
     assert int(fill_ms) >= int(decide_ms) >= 0, "the order cannot meet the ladder before the decision"
     start = r["start_ms"]
     t = start + 1000 * np.arange(K0, K1 + 1, dtype=np.int64)
     f = R.features(A, t, start, r["end_ms"], a0)
-    pu = R.p_up_brownian(f)
+    if ref == "ptbb":
+        import tf15_fv as FV
+        pu = FV.pu_twap(f["S"], f["known_sum"], f["sig"], f["T"], float(r["price_to_beat"]), basis=float(r["_basis"]))
+    elif ref == "ptb":
+        a_ref = float(r["price_to_beat"])
+        pu = R.p_up_brownian(dict(f, A0=np.full(len(t), a_ref)))
+    else:
+        pu = R.p_up_brownian(f)
     qb, qa, qbs, qas, age = _gate_at(book, t, decide_ms)
     lad, i_f = _ladder_at(book, t + int(fill_ms))
     return dict(S=f["S"].astype(np.float32), z=f["z"].astype(np.float32), sig=f["sig"].astype(np.float32), pu=pu.astype(np.float32),
@@ -83,13 +140,26 @@ def derive_window(A: R.Asset, book: R.Book, r: dict, a0: float, st: dict, fill_m
                 known=f["known_sum"].astype(np.float32))
 
 
-def derive_day(day: str, rows: list[dict], trades, hours, only_hours=None, progress=None, fill_ms: int = FILL_MS, decide_ms: int = 0):
+def derive_day(day: str, rows: list[dict], trades, hours, only_hours=None, progress=None, fill_ms: int = FILL_MS, decide_ms: int = 0, ref: str = "ptb",
+               prev_rows=None):
     """The day's table: (arrays, meta). `rows` are market rows with `up_won`; `hours(hour, rows)` yields (row, states, audit) of the pinned ladders."""
     t0 = time.time()
+    ref = ref_of(decide_ms, ref)
     assets, metas = D.build_assets(day, trades, kinds=("mid",))
     rows = sorted(rows, key=lambda r: (D.ASSETS.index(r["asset"]), r["start_ms"]))
     W = len(rows)
     widx = {r["slug"]: i for i, r in enumerate(rows)}
+    basis, basis_src = {}, None
+    if ref == "ptbb":
+        if prev_rows:
+            basis, basis_src = basis_of(prev_rows, assets), "previous day"
+        missing = [a for a in D.ASSETS if a not in basis]
+        if missing:
+            cut = D.day_start_ms(day) + BASIS_OWN_HOURS * 3_600_000
+            own = basis_of([r for r in rows if r["start_ms"] < cut and r["asset"] in missing], assets)
+            basis.update(own)
+            basis_src = (basis_src + "; " if basis_src else "") + f"own first {BASIS_OWN_HOURS} h [U] for " + ",".join(sorted(own))
+        rows = [dict(r, _basis=basis[r["asset"]][0]) if r["asset"] in basis else r for r in rows]
     nan = lambda *s: np.full(s, np.nan, np.float32)               # noqa: E731
     X = dict(S=nan(W, NK), z=nan(W, NK), sig=nan(W, NK), pu=nan(W, NK), zl=nan(W, NK, 3), qb=nan(W, NK), qa=nan(W, NK), qbs=nan(W, NK), qas=nan(W, NK),
              lad=nan(W, 4, NK, L), age=np.full((W, NK), -1, np.int32), known=nan(W, NK), path=nan(W, 961))
@@ -98,7 +168,8 @@ def derive_day(day: str, rows: list[dict], trades, hours, only_hours=None, progr
               w_status=np.full(W, 1, np.int8), w_fee=np.array([r["fee_rate"] for r in rows], np.float32),
               w_exp=np.array([r["fee_exponent"] for r in rows], np.float32), w_min=np.array([r.get("min_size", 5) for r in rows], np.float32),
               w_ptb=np.array([r.get("price_to_beat") or np.nan for r in rows]), w_final=np.array([r.get("final_price") or np.nan for r in rows]),
-              w_rows=np.zeros(W, np.int32), w_first_ms=np.full(W, -1, np.int32))
+              w_rows=np.zeros(W, np.int32), w_first_ms=np.full(W, -1, np.int32),
+              w_basis=np.array([basis[r["asset"]][0] * 1e4 if r["asset"] in basis else np.nan for r in rows], np.float32))
     pr = {k: [] for k in ("p_w", "p_t", "p_px", "p_sz", "p_side")}
     ev = {k: [] for k in ("e_w", "e_t", "e_S", "e_known", "e_sig")}
     for hour, hrows in sorted(D._by_hour(rows).items()):
@@ -118,9 +189,12 @@ def derive_day(day: str, rows: list[dict], trades, hours, only_hours=None, progr
             if Wm["w_gap"][wi] > D.GAP_MAX_S:
                 Wm["w_status"][wi] = 2
                 continue
+            if ref in ("ptb", "ptbb") and (not has_ref(r) or (ref == "ptbb" and "_basis" not in r)):
+                Wm["w_status"][wi] = 3                       # no published price to beat: no reference, never kept
+                continue
             Wm["w_status"][wi] = 0
             Wm["w_first_ms"][wi] = int(book.ts[0] - r["start_ms"])
-            d = derive_window(A, book, r, a0, st, fill_ms, decide_ms)
+            d = derive_window(A, book, r, a0, st, fill_ms, decide_ms, ref)
             for k, v in d.items():
                 X[k][wi] = v
             X["path"][wi] = A.gp[k0 - 60: k0 + 901].astype(np.float32)
@@ -148,10 +222,15 @@ def derive_day(day: str, rows: list[dict], trades, hours, only_hours=None, progr
     for k, v in list(pr.items()) + list(ev.items()):
         X[k] = np.concatenate(v) if v else np.zeros(0)
     X.update(Wm)
-    meta = dict(code=code_of(decide_ms), day=day, windows=W, ok=int((Wm["w_status"] == 0).sum()), fill_ms=int(fill_ms), k0=K0, k1=K1, levels=L, seconds=round(time.time() - t0, 1),
+    meta = dict(code=code_of(decide_ms, ref), day=day, windows=W, ok=int((Wm["w_status"] == 0).sum()), fill_ms=int(fill_ms), k0=K0, k1=K1, levels=L, seconds=round(time.time() - t0, 1),
                 binance=metas)
     if int(decide_ms):
         meta["decide_ms"] = int(decide_ms)
+        meta["ref"] = ref
+        meta["no_reference"] = int((Wm["w_status"] == 3).sum())
+        if ref == "ptbb":
+            meta["basis"] = {a: dict(bp=round(v * 1e4, 4), n=n) for a, (v, n) in basis.items()}
+            meta["basis_source"] = basis_src
     return X, meta
 
 
@@ -181,7 +260,21 @@ def checks() -> list[tuple[str, bool]]:
     out.append(("no row yet: qa NaN, age -1", np.isnan(qa_e[0]) and age_e[0] == -1))
     lad, _ = _ladder_at(b, t + 600)
     out.append(("the fill reads the ladder at t + fill_ms", np.allclose(lad[2, :, 0], [0.45, 0.45, 0.50])))
-    out.append(("the code names the clock", code_of(0) == CODE_V0 and code_of(100) == CODE and CODE != CODE_V0))
+    out.append(("the code names the clock and the reference", code_of(0) == CODE_V0 and code_of(100, "ptbb") == CODE and code_of(100) == CODE_B
+                and code_of(100, "a0") == CODE_A and len({CODE, CODE_B, CODE_A, CODE_V0}) == 4 and ref_of(0, "ptb") == "a0"))
+    # the basis: a planted Binance grid 3 bp over two prices to beat; a window off the grid and one with no price to beat are skipped
+    class _A:
+        def window_refs(self, s):
+            if s < 0:
+                raise AssertionError("window outside the Binance grid")
+            return 100.03, 0.0, 0
+    rows_ = [dict(asset="btc", start_ms=1, price_to_beat=100.0), dict(asset="btc", start_ms=2, price_to_beat=100.0), dict(asset="btc", start_ms=-5, price_to_beat=90.0),
+             dict(asset="btc", start_ms=3, price_to_beat=None)]
+    b_ = basis_of(rows_, {"btc": {"mid": _A()}})
+    out.append(("the basis is the median ln(open TWAP / price to beat) of the usable windows (3 bp, 2 windows)", set(b_) == {"btc"} and b_["btc"][1] == 2
+                and abs(b_["btc"][0] * 1e4 - 3.0) < 0.01))
+    out.append(("a window without a published price to beat has no reference", not has_ref({}) and not has_ref({"price_to_beat": None})
+                and not has_ref({"price_to_beat": float("nan")}) and has_ref({"price_to_beat": 64012.5})))
     return out
 
 

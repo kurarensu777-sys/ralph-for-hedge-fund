@@ -3,7 +3,7 @@
     C1 TailBuy        buy the cheap tail (a token asking at most a_max), alone or only when the Brownian fair value says it is underpriced by a ratio
     C2 NearCertain    buy the near-certain side (a token asking at least a_lo) only when the fair value clears the ask by theta, with at most t_max seconds left
     C3 EdgeTaker      buy the side the calibrated fair value likes by more than theta after the fee (the no-gate Brownian-edge rule of um-003 is its ancestor)
-    C4 PassiveBinance rest a bid where the fair value is above it by a margin, cancel when Binance moves against it (tf15_mk)
+    C4 PassiveBinance rest a bid where the fair value is above it by a discount, cancel when Binance moves against it (tf15_mk)
 All use the Binance trade-implied mid, the market's own fee, the exact ladder at t + 150 ms and the venue's resolution.
 """
 from __future__ import annotations
@@ -271,23 +271,23 @@ class SellTail(Taker):
 
 # ============================================================ the buy-near tests of the burst-mispricing thesis (um-011 three tests; um-021 adds four non-momentum signals, 2026-10-11)
 TESTS = {
-    "A": ("Momentum and the near token's ASK under fair value: buy the near token",
-          "after a burst of |z| at least z_min, when the NEAR token's ask sits more than theta below its driftless fair value, buy the near token at no worse than that ask"),
-    "C": ("Momentum only: buy the near token with no price gate",
+    "A": ("buy the near token after a burst when its ask is under fair value",
+          "after a burst of |z| at least z_min, when the near token's ask sits more than the discount under its driftless fair value, buy it at no worse than that ask"),
+    "C": ("buy the near token after a burst at any price",
           "after the burst, buy the near token at its ask whatever the book says against fair value (is the price gate necessary?)"),
-    "D": ("The price gate without momentum: buy the near token",
-          "test A's gate with no burst required: when the near token's ask sits more than theta below its fair value, buy it (is the momentum necessary?)"),
-    "E": ("A's rule when the near token's ask is the same price it was 3 seconds ago: nobody has re-priced the book yet",
-          "test A's burst and price gate, and the near token's ask at the decision second equal to its ask 3 seconds earlier: the book has not moved since the burst began, "
-          "which is the staleness the thesis names, read directly"),
-    "F": ("A's rule when at least one other coin is bursting the same way at the same moment: the move is market-wide, not one coin's print",
+    "D": ("buy the near token when its ask is under fair value, with no burst",
+          "test A's gate with no burst required: when the near token's ask sits more than the discount under its fair value, buy it (is the burst necessary?)"),
+    "E": ("buy after a burst when the near ask has not moved for 3 seconds",
+          "test A's burst and price gate, and the near token's ask at the decision second equal to its ask 3 seconds earlier: nobody has re-priced the book since the burst began, "
+          "the staleness the thesis names, read directly"),
+    "F": ("buy after a burst when another coin bursts the same way at the same moment",
           "test A's burst and price gate, and at least one of the other three coins in the same 15-minute slot showing a 10 s |z| of at least 3 in the same direction "
-          "at the same second"),
-    "G": ("Bitcoin bursts: buy ETH, SOL or XRP's near token when that coin's own ask sits under its own fair value (the coin itself need not have burst)",
+          "at the same second: the move is market-wide, not one coin's print"),
+    "G": ("buy ETH, SOL or XRP's near token when Bitcoin bursts and its own ask is under its own fair value",
           "ETH, SOL and XRP windows only: Bitcoin's 10 s |z| at least z_min at that second, and the coin's own near token (the side Bitcoin points to) asking more than "
-          "theta under its own fair value; the coin needs no burst of its own; buy that near token"),
-    "H": ("A's rule when at least 20 USD of the near token is on offer at the best ask: our whole order fills at one price without walking up the book",
-          "test A's burst and price gate, and the size at the near token's best ask worth at least the clip (USD 20) at the decision second, so the order should fill "
+          "the discount under its own fair value; the coin needs no burst of its own"),
+    "H": ("buy after a burst when at least 20 USD rests at the best ask",
+          "test A's burst and price gate, and the size at the near token's best ask worth at least the clip (USD 20) at the decision second, so the order fills "
           "at one price; when the best ask holds less, the fill walks up the book to dearer prices"),
 }
 LEG = {0: "buy near"}
@@ -327,10 +327,44 @@ def ask_still(tab, n=3):
     return su, sd
 
 
-def near_tests(tab, L=10, z_min=3.0, theta=0.05, t_min=300, usd=B.CLIP_USD):
+AGE_MAX_S = 2.0          # a book row this old or older is silent; the timing audit's q6 (2026-10-11): ages at E's entries p50 10 ms, p90 80 ms, 0.25% of window-seconds >= 3 s
+
+
+def feed_live(tab, age_max_s=AGE_MAX_S):
+    """The FEED mask (the timing audit, 2026-10-11, finding 3): True at (window, second) when the window's own book row is younger than `age_max_s`, or at
+    least one other coin's book in the same 15-minute slot is. A quiet single book with a live neighbour is a real book and trades; every book of the slot
+    silent at once is a hole in the archive, and "ask unchanged for n s" passes on it by construction, so it never trades. Reads `tab.age` (ms from the
+    gate's book row, -1 where none). -> bool (W, NK)."""
+    a = np.asarray(tab.age)
+    fresh = (a >= 0) & (a < int(round(age_max_s * 1000)))
+    return slot_count(tab, fresh) >= 1
+
+
+def feed_checks() -> list[tuple[str, bool]]:
+    """Planted slots for `feed_live` (no I/O)."""
+    class _T:
+        pass
+    t = _T()
+    t.slot = np.array([7, 7, 7, 7, 8, 8])
+    t.NK = 3
+    # slot 7, second 0: every book 2 s or older (a hole) -> masked; second 1: btc quiet 30 s but eth live -> kept; second 2: no row on btc, others silent -> masked
+    # slot 8 (two coins), second 0: both live; second 1: one live; second 2: both silent
+    t.age = np.array([[2_000, 30_000, -1], [2_500, 150, 5_000], [9_000, 4_000, 3_000], [2_001, 2_200, 2_100],
+                      [10, 20, 2_000], [30, 9_000, 7_000]], np.int32)
+    m = feed_live(t)
+    out = [("a slot-wide silent second is masked (every book of the slot 2 s or older)", not m[:4, 0].any()),
+           ("a single quiet book with a live neighbour in its slot is not masked", bool(m[0, 1]) and bool(m[3, 1])),
+           ("a window with no book row yet takes its slot's state", not m[0, 2]),
+           ("one live book keeps its whole slot; the age limit is strict (2,000 ms is silent)", bool(m[4:, 1].all()) and not m[4:, 2].any() and bool(m[4:, 0].all()))]
+    return out
+
+
+def near_tests(tab, L=10, z_min=3.0, theta=0.05, t_min=300, usd=B.CLIP_USD, feed=True):
     """The tests of TESTS on one pooled table, each an entries dict in (slot, asset) order (every entry a buy of the near token at its ask: `leg` 0,
     `levered` the cost over the clip, at most 1). Every price is the venue's own book as of the decision second (the gate) and the ladder at t + FILL_MS
-    (the fill). -> (entries by test, masks), where masks["gates"][test] = (gate_up, gate_dn) before the time mask, for the notebook's invariants."""
+    (the fill). `feed` True (the default from 2026-10-11) refuses every gate where the slot's feed is silent (`feed_live`). -> (entries by test, masks), where
+    masks["gates"][test] = (gate_up, gate_dn) before the time mask (after the feed mask), masks["nup_*"] the price gate with the feed mask in it, masks["feed"]
+    the feed mask (all True when `feed` is False)."""
     zl = tab.zl[:, :, {10: 0, 30: 1, 60: 2}[L]]
     # Two representations of one quote. The LIMIT a fill honours keeps the table's float32 arithmetic, the same the fill ladder carries (`ladder_of`), so a
     # level at exactly the quoted price is taken. The GATE compares on the cent grid in float64 (a quote rounded to 4 places against the float64 fair value),
@@ -351,18 +385,21 @@ def near_tests(tab, L=10, z_min=3.0, theta=0.05, t_min=300, usd=B.CLIP_USD):
         deep_up = tab.qas.astype(float) * qa_lim >= usd
         deep_dn = tab.qbs.astype(float) * qd_lim >= usd         # the Down ask's size is the Up bid's size
     gates = {"A": (a_up, a_dn), "C": (up, dn), "D": (nup_up, nup_dn), "E": (a_up & su, a_dn & sd), "F": (a_up & b_up, a_dn & b_dn), "G": (g_up, g_dn), "H": (a_up & deep_up, a_dn & deep_dn)}
+    fl = feed_live(tab) if feed else np.ones(tab.qa.shape, bool)
+    gates = {k: (g[0] & fl, g[1] & fl) for k, g in gates.items()}
 
     def near(t_up, t_dn):
         side = np.where(t_up, 1, np.where(t_dn, -1, 0))
         return _tag(B.entries(tab, side, (t_up | t_dn) & tm, np.where(side > 0, qa_lim, qd_lim), usd), 0, usd)
 
     out = {k: B.concat(near(*g)) for k, g in gates.items()}
-    masks = dict(up=up, dn=dn, nup_up=nup_up, nup_dn=nup_dn, tm=tm, gates=gates)
+    # the price gate is handed on with the feed mask in it, so a null that draws "every condition but the burst" (`tf15_oos.burst_pools`) draws live books only
+    masks = dict(up=up, dn=dn, nup_up=nup_up & fl, nup_dn=nup_dn & fl, tm=tm, gates=gates, feed=fl)
     return out, masks
 
 
 def near_gate_sweep(tab, thetas=(0.0, 0.01, 0.02, 0.03, 0.05, 0.07, 0.10, 0.15), L=10, z_min=3.0, t_min=300, usd=B.CLIP_USD):
-    """Test A's gate at several margins theta, one row each (n, win, breakeven, per, lo, hi, net): the SHAPE of the edge against the margin, not a search (the study's theta is fixed)."""
+    """Test A's gate at several discounts to fair value (theta, USD a share), one row each (n, win, breakeven, per, lo, hi, net): the SHAPE of the edge against the discount, not a search (the study's discount is fixed)."""
     rows = []
     for th in thetas:
         e = near_tests(tab, L=L, z_min=z_min, theta=th, t_min=t_min, usd=usd)[0]["A"]
@@ -828,7 +865,7 @@ def one_per_slot(tab, trig):
 class BuyNearSteady(BuyNearLayered):
     """um-020: the logical variants of the buy-near rule, held to expiry, one order per onset, chosen by the shape of the climb (the daily Sharpe on the
     validation days among cells above zero without their best 5% on both windows): the coin (all, or Bitcoin), the near ask band (0.40-0.85 as before,
-    0.60-0.85 and 0.70-0.90 for smaller, steadier wins), one order per 15-minute slot across the coins (or not), the burst (|z| 3 or 4), the margin
+    0.60-0.85 and 0.70-0.90 for smaller, steadier wins), one order per 15-minute slot across the coins (or not), the burst (|z| 3 or 4), the discount to fair value
     under fair (4 or 8 cents) and the time left (120 or 300 s). No exits: um-016 and um-018 showed every exit worth less than holding."""
     id = "c13-buy-near-steady"
     title = "Buy the near token a burst left under fair value: the steady-climb variants"
@@ -934,7 +971,7 @@ def touch_still(tab, n=3):
 
 def stale_cache(tab):
     """The per-table pieces every stale cell reads, computed once: the limits in float32-true arithmetic, the gates' quotes on the cent grid, the runs of
-    definitions (b) and (c). Bursts and margins are added on demand (`_stale_mask`)."""
+    definitions (b) and (c). Bursts and discounts are added on demand (`_stale_mask`)."""
     if tab not in _STALE:
         qa_lim, qd_lim = quotes(tab)
         rb_u, rb_d = still_runs(tab, sizes=False)
@@ -966,6 +1003,13 @@ def _stale_mask(tab, key):
     return m[key]
 
 
+def _stale_feed(tab):
+    m = stale_cache(tab)["memo"]
+    if ("feed",) not in m:
+        m[("feed",)] = feed_live(tab)
+    return m[("feed",)]
+
+
 def stale_masks(tab, kind, n):
     """(Up, Down) of the stale condition `kind` (a, b, c of STALE_DEFS) over the last n seconds; n = 0 is no condition beyond a quote being there."""
     if n <= 0:
@@ -989,8 +1033,9 @@ class BuyNearStale(Taker):
                   band=("any", "40-85"))
     REDUCED = dict(L=(10,), t_min=(120, 300))
 
-    def __init__(self, reduced=False):
+    def __init__(self, reduced=False, feed=False):
         self.reduced = bool(reduced)
+        self.feed = bool(feed)               # True refuses a decision on a slot-wide silent feed (`feed_live`); off replays the grid as run before 2026-10-11
 
     def levels(self):
         lv = dict(self.LEVELS)
@@ -1018,6 +1063,9 @@ class BuyNearStale(Taker):
         su, sd = stale_masks(tab, cfg["kind"], cfg["n"])
         g_up = up & nu & bu & su
         g_dn = dn & nd & bd & sd
+        if self.feed:
+            fl = _stale_feed(tab)
+            g_up, g_dn = g_up & fl, g_dn & fl
         side = g_up.astype(np.int8) - g_dn.astype(np.int8)
         trig = (g_up | g_dn) & tmask(tab, cfg["t_min"])
         return side, trig, _stale_mask(tab, ("lim", cfg["L"])), None
@@ -1028,4 +1076,5 @@ class BuyNearStale(Taker):
         nu, nd = _stale_mask(tab, ("nup", cfg["theta"]))
         bu, bd = _stale_mask(tab, ("band", cfg["band"]))
         su, sd = stale_masks(tab, cfg["kind"], cfg["n"])
-        return up & nu & bu & su, dn & nd & bd & sd
+        fl = _stale_feed(tab) if self.feed else True
+        return up & nu & bu & su & fl, dn & nd & bd & sd & fl

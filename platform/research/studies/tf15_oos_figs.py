@@ -334,8 +334,7 @@ def random_fig(nulls, tests, notes, question, window, colw=(0.30, 0.46, 0.11, 0.
 
 
 # ============================================================ the findings under each figure (computed; the notebook cell passes the reads)
-NET_NOTE = ("The solid lines are the PnL before the taker fee and the dotted ink paths after it; every verdict, every number in the table and every bullet "
-            "here is on the PnL after the fee (what we keep).")
+NET_NOTE = "Solid lines are the PnL before the taker fee, dotted ink lines after it; every verdict and number here is after the fee."
 
 
 def block_notes(reads, min_n=20):
@@ -343,6 +342,16 @@ def block_notes(reads, min_n=20):
     f0 = reads[0]["s"]
     lo, hi = f0.get("per_lo", np.nan), f0.get("per_hi", np.nan)
     out = []
+    nxt = next((r for r in reads if r["role"] != "forecast"), None)
+    if nxt is not None and nxt["s"].get("n"):
+        s1 = nxt["s"]
+        span = f"The next {nxt['n_days']} days ({nxt['first'][5:]} to {nxt['last'][5:]}) net {s1['per']:+.3f} USD an entry on {s1['n']:,} entries"
+        if nxt["verdict"] == "PASS":
+            out.append(f"Yes. {span}, above zero and inside the {lo:+.2f} to {hi:+.2f} the first {reads[0]['n_days']} days forecast.")
+        elif nxt["verdict"] == "thin":
+            out.append(f"Too few entries to say. {span}, under {min_n}.")
+        else:
+            out.append(f"No. {span}, " + ("below zero" if s1["per"] <= 0 else "outside the forecast") + f"; the first {reads[0]['n_days']} days forecast {lo:+.2f} to {hi:+.2f}.")
     for r in reads:
         s = r["s"]
         head = f"{r['name'].capitalize()}, {r['first'][5:]} to {r['last'][5:]} ({r['n_days']} days): {s.get('n', 0):,} entries"
@@ -362,8 +371,7 @@ def block_notes(reads, min_n=20):
             why = "below zero" if s["per"] <= 0 else ("under the forecast's interval" if s["per"] < lo else "above the forecast's interval")
             d = floor - s["per"] if s["per"] < floor else s["per"] - hi
             out.append(head + f": FAIL, {why}; it would pass if the net an entry moved {d:.3f} (about {d * s['n']:,.0f} USD over its entries) into {floor:+.2f} to {hi:+.2f}.")
-    return out + [NET_NOTE, "The hurdle is zero net after fees; there is no T-bill line, because the clip is tied up for at most 15 minutes and the carry on it is nil at this size.",
-                  "The blocks are cut by day index as the brief set them, not on the results; the rule was read on every day before, so this checks a fixed rule's steadiness, not a fitted parameter."]
+    return out + [NET_NOTE, "The hurdle is zero net after fees. The blocks are cut by date, not on the results."]
 
 
 def fold_notes(fr, days, week=7, min_n=20):
@@ -372,11 +380,11 @@ def fold_notes(fr, days, week=7, min_n=20):
     pooled = (f"Pooled out-of-sample (every out-of-sample week together, {days[week][5:]} to {days[-1][5:]}): {pl['n']:,} entries, {pl['per']:+.3f} USD an entry "
               f"(95% by slot {pl['per_lo']:+.2f} to {pl['per_hi']:+.2f}), {pl['per_ex_top5']:+.3f} without the best 5%; "
               + ("the interval clears zero." if pl["per_lo"] > 0 else "the interval spans zero." if pl["per_hi"] > 0 else "the interval is below zero.")) if pl.get("n") else "No out-of-sample entry."
-    return [NET_NOTE, f"Out-of-sample above zero in {fr['above']} of {fr['n_folds']} folds; consistent (at least {min_n} entries, above zero and inside the in-sample week's 95% interval) "
-            f"in {fr['consistent']} of {fr['n_folds']}" + (f"; {fr['thin']} thin, not counted as a pass." if fr["thin"] else "."),
-            pooled,
-            f"Spearman rank correlation of the in-sample and out-of-sample fold means: {fr['rho']:+.2f} on {fr['n_folds']} points. It describes; five points cannot test anything.",
-            f"Fold {last['fold']}'s out-of-sample week has {last['out_n_days']} days ({last['out_days']}), the seated days left after the last full week.",
+    head = (f"{'Yes' if pl.get('n') and pl['per'] > 0 and fr['consistent'] * 2 > fr['n_folds'] else 'Not clearly'}. {fr['above']} of {fr['n_folds']} weeks net above zero after the week before, "
+            f"and {fr['consistent']} of {fr['n_folds']} agree with it (at least {min_n} entries, above zero, inside the earlier week's 95% interval)"
+            + (f"; {fr['thin']} too thin to count." if fr["thin"] else "."))
+    return [head, pooled, NET_NOTE,
+            f"The last week has {last['out_n_days']} days ({last['out_days']}), the days left after the last full week.",
             "Each week's net: " + "; ".join(f"week {i} ({d}) {s.get('net', 0.0):+,.0f} USD on {s.get('n', 0):,} entries" for i, (d, s) in
                                             enumerate([(fr["rows"][0]["in_days"], fr["rows"][0]["s_in"])] + [(r["out_days"], r["s_out"]) for r in fr["rows"]], 1)) + "."]
 
@@ -422,38 +430,31 @@ def burst_rows(lab, s, e_ask, rb, rs, p, draws, gate, t_min, agree):
         rows += [["Random burst", f"{obs:+.3f} against null median {med(rb['per']):+.3f}; p {pt(p['burst'])}", f"p < {gate:.2f}", vd(p["burst"])],
                  ["Random burst, ex best 5%", f"{obs5:+.3f} against null median {med(rb['ex5']):+.3f}; p {pt(p['burst_ex5'])}", f"p < {gate:.2f}", vd(p["burst_ex5"])]]
         if rb["how"] == "moment":
-            pool = (f"a uniform second with at least {t_min} s left and a finite ask, a coin-flip side, a pick that does not fill retried at other seconds of the same "
-                    f"window (test {lab} has no price gate, so its null is the time mask alone)")
+            pool = f"random seconds with at least {t_min} s left, a coin-flip side (test {lab} has no price gate, so the time mask is all it shares)"
         else:
-            pool = (f"seconds that pass every condition of test {lab} except the burst ({rb['cells']:,} cells with at least {t_min} s left), the side the one whose ask "
-                    "passes the gate there, bought at that ask, one entry a window")
-        notes.append(f"Random burst: p {ps(p['burst'])} on {draws:,} draws. The null places the test's count of entries in each day and coin ({rb['target']:,}; "
-                     f"{rb['n'].mean():,.1f} filled a draw on average) at {pool}. "
-                     + ("Over seconds drawn this way, the burst's direction adds to the net." if vd(p["burst"]) == "PASS" else
-                        "Over seconds drawn this way, the burst's direction adds nothing a second drawn at random does not."))
-        notes.append(f"Without the best 5% the test nets {obs5:+.3f} an entry (95% by slot {s['per_ex_top5_lo']:+.2f} to {s['per_ex_top5_hi']:+.2f}) against a "
-                     f"random-burst median of {med(rb['ex5']):+.3f}: p {ps(p['burst_ex5'])}.")
+            pool = f"random seconds that pass every condition of test {lab} except the burst ({rb['cells']:,} cells with at least {t_min} s left), one entry a window"
+        notes.append(f"{'Yes' if vd(p['burst']) == 'PASS' else 'No'}. Test {lab} nets {obs:+.3f} USD an entry against a median {med(rb['per']):+.3f} for the same number of entries "
+                     f"at {pool}: p {ps(p['burst'])} on {draws:,} draws, so " + ("the burst's direction adds to the net." if vd(p["burst"]) == "PASS" else
+                                                                                "the burst's direction adds nothing a random second does not."))
+        notes.append(f"Without the best 5% it nets {obs5:+.3f} an entry (95% by slot {s['per_ex_top5_lo']:+.2f} to {s['per_ex_top5_hi']:+.2f}) against a "
+                     f"median {med(rb['ex5']):+.3f}: p {ps(p['burst_ex5'])}.")
     else:
-        notes.append(f"Test {lab} has no burst to randomise: its random-burst null would be the test itself, so only the coin-flip side is drawn and no null is a gate here.")
+        notes.append(f"{'Yes' if vd(p['side']) == 'PASS' else 'No'}. Test {lab} has no burst, so only a coin flip for the side to buy is drawn: it nets {obs:+.3f} USD an entry "
+                     f"against a median {med(rs['per']):+.3f} (p {ps(p['side'])} on {draws:,} draws).")
     rows.append([COINFLIP[0].upper() + COINFLIP[1:], f"{obs:+.3f} against null median {med(rs['per']):+.3f}; p {pt(p['side'])}", "not a gate", "reading"])
     gated = rb is None or rb["how"] == "pool"
-    notes.append(f"Coin-flip side: p {ps(p['side'])}. It keeps the test's own decision seconds and flips the side ({rs['n'].mean():,.0f} entries a draw against "
+    notes.append(f"Coin-flip side (a reading, not a gate): p {ps(p['side'])}. It flips the side at the test's own seconds ({rs['n'].mean():,.0f} entries a draw against "
                  f"the test's {s['n']:,}); "
-                 + ("on a flip it buys the far token, whose ask sits over its fair value wherever the near one passes the gate, so it loses by construction and "
-                    "measures the price gate, not the burst." if gated else
-                    f"test {lab} has no price gate, so here the flip buys the token the burst points away from at its own ask.")
-                 + " Printed as a reading, never a gate.")
+                 + ("it buys the far token, which sits over its fair value wherever the near one passes, so it measures the price gate, not the burst." if gated else
+                    f"test {lab} has no price gate, so the flip buys the token the burst points away from."))
     price = [f"the rule {np.mean(e_ask):.3f} and {s['fee_per']:.3f} USD"]
     if rb is not None:
         price.append(f"the random burst {np.nanmean(rb['ask']):.3f} and {np.nanmean(rb['fee']):.3f}")
     price.append(f"the coin-flip side {np.nanmean(rs['ask']):.3f} and {np.nanmean(rs['fee']):.3f}")
-    notes.append(("Price paid, the mean ask at the decision second and the mean taker fee an entry (the nulls' means over their draws): " + "; ".join(price) + ". "
-                  + ("Every random-burst entry passes the same gate as the rule, so it buys at least as far under its own fair value; the price level is the pool's, not the rule's."
-                     if rb is not None and rb["how"] == "pool" else "")).rstrip())
-    notes.append("Days are not shifted here: the signal lives inside one 15-minute window, so moving a day's entries to another day breaks nothing the rule depends on; "
-                 f"the entries are randomised instead. A p at the floor 1/{draws + 1:,} means no draw reached the observed value, not that p is zero.")
+    notes.append("Mean ask and mean taker fee an entry: " + "; ".join(price) + ".")
+    notes.append(f"A p at the floor 1/{draws + 1:,} means no draw reached the observed value, not that p is zero.")
     ag = [f"the coin-flip side ({agree['side'][1]:,} entries)"]
     if agree.get("burst") is not None:
-        ag.insert(0, f"the random burst ({agree['burst']['n']:,} entries" + (", no fault in its gate, count or one-a-window checks)" if gated else ")"))
-    notes.append("One draw of each null replayed through the engine on the dense window-by-second matrices agrees with the fast path: " + " and ".join(ag) + ".")
+        ag.insert(0, f"the random burst ({agree['burst']['n']:,} entries)")
+    notes.append("One draw of each null replayed through the engine matches the fast path: " + " and ".join(ag) + ".")
     return rows, notes

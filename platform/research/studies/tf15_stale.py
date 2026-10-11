@@ -132,7 +132,7 @@ def sweep_fig(sw, form, ns, window, notes, n_e=3, question=None):
     points) by two columns (the design days, the test days), each definition a line in its identity colour against the window n; zero is the decision line
     and E's 3 s is marked."""
     lim_word = "the ask seen" if form == "ask" else "our edge price"
-    q = question or f"How does the edge change with the stale window, by definition, with the limit at {lim_word}?"
+    q = question or f"How does the edge change with how long the book has not moved, with the limit at {lim_word}?"
     fig, axes = LF.frame(9.4, notes, q, window, ncols=2, nrows=4, hspace=0.42, wspace=0.16)
     rows = [("per", "net USD an entry (95% by slot)"), ("per_ex_top5", "net an entry without the best 5%"), ("n", "entries"),
             ("margin", "win rate less the rate needed, points")]
@@ -243,7 +243,7 @@ def surface_grid(cand, tab, cfg, roles, part, key="per_ex_top5"):
     return g
 
 
-def surface_fig(gv, gt, chosen, window, notes, question="Is the chosen stale window and discount to fair value on a plateau or on a spike?"):
+def surface_fig(gv, gt, chosen, window, notes, question="Is the chosen setting on a broad plateau or on a lone spike?"):
     """Two heat maps (validation days, test days) of the net an entry without the best 5% over n x theta at the chosen cell's other levels, the value in each
     cell, the chosen cell outlined in ink and its neighbours in grey, a diverging scale around zero (green above, red below); one table under them; PASS or
     FAIL top right (the chosen cell and every neighbour above zero on the validation days)."""
@@ -298,7 +298,7 @@ def surface_fig(gv, gt, chosen, window, notes, question="Is the chosen stale win
     return fig
 
 
-def rules_fig(rules, days_test, window, notes, question="Does the chosen cell beat test E as built and rule A on the test days?"):
+def rules_fig(rules, days_test, window, notes, question="Does the chosen setting beat test E as built and rule A on the test days?"):
     """Left: each rule's net an entry on the test days with its 95% slot interval (bar green above zero, red below) and the net without the best 5% (ink
     diamond), zero as the decision line. Right: each rule's cumulative net on the test days entry by entry, in its identity colour. One table under them.
     `rules` maps a label ("E", "cell", "A") to (title, entries on the test days, stats)."""
@@ -413,7 +413,7 @@ def crossing(rows):
     return None
 
 
-def latency_fig(lat, window, notes, base_ms=250, question="How much does a later order lose: per entry, in dollars, and which entries does it lose?"):
+def latency_fig(lat, window, notes, base_ms=250, question="How much do we lose if our order arrives a second late?"):
     """Four panels against the delay (log scale), a line a rule in its identity colour, the study's 250 ms marked as the assumption [U]. Top left: the net an
     entry with its 95% slot interval, zero the decision line, each rule's zero crossing labelled. Top right: the total net USD (the survivor effect the
     per-entry net hides). Bottom left: the base-delay net an entry of the base entries the delay LOSES (solid) and of those it KEEPS (ink dotted), whole-second
@@ -485,7 +485,7 @@ def cost_read(cand, tab, cfg, idx, mults=(0.0, 0.5, 1.0, 1.5, 2.0, 3.0), slips=(
                 rates=rates, shares=float(np.mean(e["shares"])) if len(e["net"]) else NAN, stats=stats(e))
 
 
-def cost_fig(costs, window, notes, question="How much fee and slippage can the edge bear before it turns?"):
+def cost_fig(costs, window, notes, question="How much more taker fee can the edge bear before it is gone?"):
     """Left: the bridge an entry for each rule (gross, the fee in the fees colour, net; gross and net green or red by sign, each with its 95% slot interval).
     Middle: the net an entry at fee multipliers 0 to 3 with intervals, a line a rule, zero the decision line, each rule's break-even multiplier a labelled
     vertical. Right: the net an entry with the limit raised 0, 1 and 2 cents over the ask seen. One table under them. `costs` maps a label to (title, cost_read)."""
@@ -591,7 +591,7 @@ def slices(e, tab, days):
     return out
 
 
-def slices_fig(sl, overall, window, notes, question="Does the edge hold in every slice, or does one slice carry it?"):
+def slices_fig(sl, overall, window, notes, question="Does the edge hold in every group of trades, or does one group carry it?"):
     """The chart bank's edge by slice for two rules: one row a slice, grouped by dimension; each rule's net an entry with its 95% slot interval (circle E,
     square the chosen cell, green above zero, red below), each rule's overall net a labelled ink dotted vertical; the counts on the same rows on the right.
     `sl` maps a label to (title, slices rows); `overall` maps a label to its overall net."""
@@ -663,7 +663,7 @@ def weeks(e, days, week=7):
     return out
 
 
-def steady_fig(ents, days, r2_min, window, notes, question="Does the book climb steadily day after day, or in jumps?"):
+def steady_fig(ents, days, r2_min, window, notes, question="Does the account climb steadily, or in jumps?"):
     """Left: the cumulative daily net of each rule (identity colours, solid steps) with its straight-line fit (ink dotted). Middle: each week's net an entry
     with its 95% slot interval, a marker a rule, green above zero and red below, zero the decision line. Right: the r-squared of each rule's straight line with
     a 95% interval over resampled days, the steadiness gate [U] an ink dotted vertical. `ents` maps a label to (title, entries on every day)."""
@@ -729,7 +729,7 @@ def exit_variants(tab, e):
     return out
 
 
-def exits_fig(ex, window, notes, question="Does any exit beat holding the stale-book entries to expiry?"):
+def exits_fig(ex, window, notes, question="Does selling early beat holding to expiry?"):
     """Left: each exit's net an entry with its 95% slot interval, a marker a rule, green above zero and red below, zero the decision line. Right: what the exit
     is worth against holding the SAME entries (the difference an entry, 95% by slot), zero the decision line. One table under them. `ex` maps a label to
     (title, exit_variants)."""
@@ -807,7 +807,7 @@ def risk_read(e, nd, book=1000.0, stop_day=60.0, dd_limit=150.0):
                 dd_crossed=bool(len(dd) and dd.max() >= dd_limit), net=tot, book=book)
 
 
-def risk_fig(risks, days, stop_day, dd_limit, window, notes, question="How deep did the stale-book rule fall, and would the pre-registered limits have fired?"):
+def risk_fig(risks, days, stop_day, dd_limit, window, notes, question="How far did the account fall, and would our stop and loss limit have fired?"):
     """Left: each rule's net by day (green gain, red loss; a panel a rule stacked), the daily stop [U] an ink dotted line. Right: the drawdown from the running
     peak entry by entry, a line a rule, the drawdown limit [U] an ink dotted line. One table under them. `risks` maps a label to (title, risk_read)."""
     labs = list(risks)
@@ -877,7 +877,7 @@ def curve_ask(tab, masks, lab, ndays, t_min, clips, n_boot=2000):
     return rows
 
 
-def clip_fig(curves, window, notes, question="How large a clip keeps the edge without its best 5%, under each fill limit?"):
+def clip_fig(curves, window, notes, question="Does a bigger order keep the edge if we drop the few best trades?"):
     """Left: the net an entry with its 95% slot interval against the clip (log), a line a rule and limit (the rule's identity colour; the edge-price form
     drawn with square markers), zero the decision line. Right: the net an entry without the best 5% against the clip, the same lines, zero the decision line,
     the largest clip above zero marked. `curves` maps (label, form) to (title, rows)."""
@@ -1164,7 +1164,7 @@ def _f(v, d=2):
 
 
 def surface_all_fig(surf, cells, e_name, final_name, window, notes, levels=None,
-                    question="Which stale window, definition, discount to fair value and limit earn without the best 5% on every seated day, and where is the plateau?"):
+                    question="Which settings of the rule earn money even without the few best trades?"):
     """The descriptive surface of the second-pass grid on every seated day: one heat map a (definition, limit), the window n on x and the discount to fair value (theta, in cents) as rows;
     each cell shows the net an entry without the best 5% (bold when its 95% slot interval clears zero), that interval and the entry count, on a diverging
     scale around zero (green above, red below). The final cell is outlined thick in ink and its 3 x 3 neighbours thin in ink2; E as built in its identity
@@ -1241,7 +1241,7 @@ def _tt(e):
     return (np.asarray(e["slot"], np.int64) * 900 + 900).astype("datetime64[s]")
 
 
-def walk_fig(recs, wf, days, notes, window, gate_ok, question="Does E tuned on the weeks before each week beat E as built on that week?"):
+def walk_fig(recs, wf, days, notes, window, gate_ok, question="Does picking the setting from past weeks beat the plain 3-second rule?"):
     """Top: the cumulative PnL over the out-of-sample days, E tuned before the taker fee solid (ink2) and after it ink dotted, E as built and rule A after the
     fee solid in their colours; each week's start an ink vertical with the fold's chosen cell above it. Middle: each week's net an entry with its 95% slot
     interval, a marker a rule, zero the decision line. One table: a row a fold and the pooled record. PASS or FAIL top right (gate G-walk).
@@ -1304,7 +1304,7 @@ def walk_fig(recs, wf, days, notes, window, gate_ok, question="Does E tuned on t
                  f"{_f(st.get('per_ex_top5'))} ({_f(st.get('per_ex_top5_lo'))} to {_f(st.get('per_ex_top5_hi'))})", f"{se.get('n', 0):,}", _f(se.get("per")),
                  f"{_f(se.get('per_ex_top5'))} ({_f(se.get('per_ex_top5_lo'))} to {_f(se.get('per_ex_top5_hi'))})"])
     tb = fs.put_table(axt, rows, ["Traded week", "Chosen on", "Pick", "Entries", "Net an entry", "Ex-5% (95%)", "E entries", "E net", "E ex-5%"], size=7.8)
-    _colw(tb, [0.07, 0.14, 0.13, 0.07, 0.09, 0.18, 0.08, 0.07, 0.17])
+    _colw(tb, [0.10, 0.12, 0.13, 0.07, 0.09, 0.17, 0.08, 0.07, 0.17])
     n_r = len(rows)
     fs.gold(tb, n_r, 5)
     fs.tint(tb, n_r, 8, "green" if gate_ok else "rose")
@@ -1313,7 +1313,7 @@ def walk_fig(recs, wf, days, notes, window, gate_ok, question="Does E tuned on t
     return fig
 
 
-def stable_fig(wf, days, notes, window, question="Is the pick the same week after week, and does the week it is traded on agree with the weeks it was chosen from?"):
+def stable_fig(wf, days, notes, window, question="Is the setting we picked the same from one week to the next?"):
     """A panel a fold: along the window n for the fold's chosen definition, discount and limit, the smoothed choosing score (model identity, the rule's belief),
     the raw choosing score (muted) and the applied week's realised net without the best 5% (Polymarket identity, the market's answer) with its 95% slot
     interval; the chosen n an ink dotted vertical, zero the axis line. One table: the traded week by its dates, the pick, its three runners-up, the pick's net without
@@ -1356,7 +1356,7 @@ def stable_fig(wf, days, notes, window, question="Is the pick the same week afte
     return fig
 
 
-def final_fig(lat, costs, rows, cols, notes, window, base_ms=250, question="How does the final cell hold up against delay and fees beside E as built?"):
+def final_fig(lat, costs, rows, cols, notes, window, base_ms=250, question="Does the final setting survive a late order and a higher fee?"):
     """Left: the net an entry with its 95% slot interval against the delay (log scale). Middle: the total net USD against the delay. Right: the net an entry
     with its interval against the fee multiple (1 = each market's own rate), each rule's break-even multiple labelled. Lines in the rules' identity colours,
     zero the decision line, the study's 250 ms and the venue's own rate ink dotted verticals. One table (`rows`, `cols`): the final cell's reads."""
@@ -1374,8 +1374,9 @@ def final_fig(lat, costs, rows, cols, notes, window, base_ms=250, question="How 
         a3.fill_between(m, [s["per_lo"] for _, s in c["fee"]], [s["per_hi"] for _, s in c["fee"]], color=col, alpha=0.14, lw=0, zorder=2)
         a3.plot(m, [s["per"] for _, s in c["fee"]], color=col, marker=mk, ms=4, lw=1.8, zorder=4, label=t)
         if np.isfinite(c.get("be_mult", NAN)) and c["be_mult"] <= m.max():
-            a3.annotate(f"{t.split(':')[0]} breaks even at {c['be_mult']:.2f}x", (c["be_mult"], 0), xytext=(4, 12), textcoords="offset points", fontsize=7.5, color=INK,
-                        arrowprops=dict(arrowstyle="-", color=INK, lw=0.8))
+            right = c["be_mult"] > 0.6 * m.max()
+            a3.annotate(f"{t.split(':')[0]} breaks even at {c['be_mult']:.2f}x", (c["be_mult"], 0), xytext=(-4 if right else 4, 12), textcoords="offset points", fontsize=7.5, color=INK,
+                        ha="right" if right else "left", arrowprops=dict(arrowstyle="-", color=INK, lw=0.8))
     ticks = next(iter(lat.values()))[1]
     for ax in (a1, a2):
         ax.set_xscale("log")
@@ -1487,7 +1488,7 @@ def ex5_path(net, pct=5):
     return np.cumsum(v)
 
 
-def weekly_ex5_fig(rules, days, week, window, notes, question="Does each week earn without its best 5% of entries, or do a few lucky wins carry it?"):
+def weekly_ex5_fig(rules, days, week, window, notes, question="Do we still make money each week if we drop the few best trades?", cols=None):
     """A panel a rule (stacked on one time axis): each week's PnL after the fee cumulated from zero, all entries solid in the rule's identity colour and the
     same week with its best 5% of entries set to zero solid in muted grey; each week's start an ink vertical, its dates under the panels, PASS (green) or FAIL
     (red) above it when the without-best-5% line ends above zero or not; zero ink dotted. One table: a row a rule and week, and the pooled days.
@@ -1498,7 +1499,7 @@ def weekly_ex5_fig(rules, days, week, window, notes, question="Does each week ea
     fig, axes, axt, H = _canvas_tab(5.2, n_rows, notes, question, window, nrows=len(rules), hspace=0.42, below=0.85)
     rows, tints = [], []
     for ax, (lab, (title, e)) in zip(axes, rules.items()):
-        col = RULE_COL.get(lab, MUTED)
+        col = (cols or RULE_COL).get(lab, MUTED)
         e = B.concat(e) if len(e["net"]) else e
         n_pass = 0
         for j, idx in enumerate(wk):
@@ -1540,7 +1541,7 @@ def weekly_ex5_fig(rules, days, week, window, notes, question="Does each week ea
     return fig
 
 
-def rules_paths_fig(lines, days, weeks, window, notes, question="How did each rule build the account over the days, and did tuning beat the rule as built?"):
+def rules_paths_fig(lines, days, weeks, window, notes, question="Did the tuned rule grow the account faster than the plain rule?"):
     """The cumulative PnL after the fee over time, a solid line a rule, each line from zero on its own first day, its end labelled with its total; the week
     boundaries faint verticals, zero ink dotted. `lines` is a list of (label, end name, entries, colour, linewidth, first day index)."""
     fig, (ax,) = LF.frame(4.6, notes, question, window)
@@ -1571,17 +1572,165 @@ def rules_paths_fig(lines, days, weeks, window, notes, question="How did each ru
     return fig
 
 
-def burst_masks(tab, cfg):
+def e_gates(tab, cfg, pu=None, cap=None, feed=True):
+    """The stale cell's conditions with two optional changes: `pu` another fair value (W, NK) for the discount test, `cap` the most the ask seen may be
+    (USD a share, on the gate's cent grid). -> dict(up, dn (the burst), nup_up, nup_dn (every other condition, the feed mask in it))."""
+    c = C.stale_cache(tab)
+    up, dn = C._stale_mask(tab, ("burst", cfg["L"], cfg["z_min"]))
+    p = c["pu"] if pu is None else np.asarray(pu, float)
+    with np.errstate(invalid="ignore"):
+        nu, nd = c["qa"] < p - cfg["theta"], c["qd"] < (1.0 - p) - cfg["theta"]
+        if cap is not None:
+            nu, nd = nu & (c["qa"] <= cap + 1e-9), nd & (c["qd"] <= cap + 1e-9)
+    bu, bd = C._stale_mask(tab, ("band", cfg["band"]))
+    su, sd = C.stale_masks(tab, cfg["kind"], cfg["n"])
+    fl = C._stale_feed(tab) if feed else True
+    return dict(up=up, dn=dn, nup_up=nu & bu & su & fl, nup_dn=nd & bd & sd & fl)
+
+
+def e_variant(tab, cfg, pu=None, cap=None, feed=True, usd=B.CLIP_USD):
+    """The cell with `e_gates`' changes, filled as `BuyNearStale` fills (limit the ask seen, one entry a window, retry each second). -> (entries, gates
+    (gate_up, gate_dn) before the time mask, masks for `tf15_oos.random_burst` under the label "A")."""
+    g = e_gates(tab, cfg, pu, cap, feed)
+    g_up, g_dn = g["up"] & g["nup_up"], g["dn"] & g["nup_dn"]
+    side = g_up.astype(np.int8) - g_dn.astype(np.int8)
+    tm = C.tmask(tab, cfg["t_min"])
+    e = B.concat(B.entries(tab, side, (g_up | g_dn) & tm, C._stale_mask(tab, ("lim", cfg["L"])), usd))
+    return e, (g_up, g_dn), dict(nup_up=g["nup_up"], nup_dn=g["nup_dn"], tm=tm)
+
+
+def gate_paths_fig(lines, days, window, notes, question="Does the capped version of E build the account better?"):
+    """Two panels on one time axis: the cumulative PnL after the fee of each rule (a solid line in its colour), and the same with each rule's best 5% of
+    entries set to zero; each line's end labelled with its total, zero ink dotted. `lines` is a list of (label, short name, entries, colour)."""
+    fig, axes = LF.frame(6.4, notes, question, window, nrows=2, hspace=0.38)
+    t0 = np.datetime64(days[0], "s")
+    t1 = np.datetime64(days[-1], "s") + np.timedelta64(86400, "s")
+    ends = {0: [], 1: []}
+    for lab, short, e, col in lines:
+        e = B.concat(e) if len(e["net"]) else e
+        x = np.concatenate([[t0], _tt(e)])
+        for i, y in enumerate((np.concatenate([[0.0], np.cumsum(np.asarray(e["net"], float))]), np.concatenate([[0.0], ex5_path(e["net"])]))):
+            axes[i].step(x, y, where="post", color=col, lw=1.8, zorder=4, label=lab)
+            ends[i].append((y[-1], f"{short} {y[-1]:+,.0f}", col))
+    for i, ax in enumerate(axes):
+        ax.axhline(0, color=INK, ls=":", lw=1.2, zorder=3)
+        ax.set_xlim(t0, t1 + (t1 - t0) * 0.16)
+        _day_ticks(ax, days, 12)
+        ax.set_ylabel("USD after the fee, cumulative")
+        ax.set_title("every entry" if i == 0 else "without each rule's best 5% of entries (set to zero)", fontsize=9.5, loc="left")
+    axes[0].legend(loc="upper left", fontsize=8, frameon=False)
+    axes[1].set_xlabel("UTC day")
+    for i, ax in enumerate(axes):
+        lo_, hi_ = ax.get_ylim()
+        last = None
+        for v, txt, col in sorted(ends[i], key=lambda t: t[0]):
+            yv = v if last is None else max(v, last + (hi_ - lo_) * 0.05)
+            ax.annotate(txt, (t1, v), xytext=(t1 + (t1 - t0) * 0.01, yv), textcoords="data", fontsize=8, color=col, va="center", weight="bold", annotation_clip=False)
+            last = yv
+    return fig
+
+
+LADDER_NOTIONAL = (2000.0, 3000.0, 4000.0, 5000.0, 10000.0)        # starting notional, USD; the clip is 1% of it (the owner, 2026-10-11)
+
+
+def entries_fok(tab, side, trig, lim, usd=B.CLIP_USD):
+    """The venue's FOK ("fills entirely or cancels immediately"): an order counts only when the whole clip fills at or under its limit on the ladder it meets;
+    otherwise nothing trades and the rule decides again at its next second, as with a miss under FAK. -> entries in time order."""
+    import tf15_capacity as CAP
+    e = B.entries(tab, side, trig, lim, usd, one_per_window=False)
+    if not len(e["net"]):
+        return e
+    e = B.subset(e, np.asarray(e["cost"]) >= float(usd) - CAP.FULL_TOL)
+    if len(e["net"]):
+        w = np.asarray(e["w"])
+        e = B.subset(e, np.concatenate([[True], w[1:] != w[:-1]]))
+    return B.concat(e) if len(e["net"]) else e
+
+
+def ladder_rows(cand, tab, cfg, ndays, notionals=LADDER_NOTIONAL, pct=0.01):
+    """The sizing ladder of a cell at `pct` of each starting notional a trade. Fill statistics on each window's FIRST order (the rule's first trigger second,
+    its limit, the ladder 250 ms later; `tf15_capacity.walk_to`): the share filled in full, the mean USD got over USD wanted, the share with no fill (under 5
+    shares), the mean cents paid over the best ask. Money on the engine re-run at that clip (a miss retries at the next second): under the venue's FAK
+    (`tf15_bt.entries`, what fills kept from 5 shares) and FOK (`entries_fok`). -> list of dict."""
+    import tf15_capacity as CAP
+    side, trig, lim, _ = cand.triggers(tab, cfg, {})
+    lim = limit_of(tab, cfg, side, lim, cfg.get("limit", "ask"))
+    trig = trig & (side != 0) & np.isfinite(lim)
+    has = trig.any(axis=1)
+    w = np.flatnonzero(has)
+    k = np.argmax(trig[w], axis=1)
+    e0 = dict(w=w, k=k, side=side[w, k])
+    clips = [n * pct for n in notionals]
+    wt = CAP.walk_to(tab, e0, clips, limit=lim[w, k]) if len(w) else None
+    rows = []
+    for j, (nt, x) in enumerate(zip(notionals, clips)):
+        sh = wt["shares"][:, j] if wt is not None else np.zeros(0)
+        got = sh >= B.MIN_SHARES
+        r = dict(notional=nt, clip=x, orders=len(w), full=float(np.mean(wt["full"][:, j] & got)) if len(w) else NAN,
+                 fill_share=float(np.mean(np.where(got, wt["cost"][:, j], 0.0) / x)) if len(w) else NAN, none=float(np.mean(~got)) if len(w) else NAN,
+                 cents=float(np.nanmean(np.where(got, wt["cents"][:, j], np.nan))) if got.any() else NAN)
+        for nm, e in (("fak", B.concat(B.entries(tab, side, trig, lim, x))), ("fok", entries_fok(tab, side, trig, lim, x))):
+            s = stats(e)
+            r[nm] = dict(n=s.get("n", 0), per=s["per"], lo=s["per_lo"], hi=s["per_hi"], ex5=s["per_ex_top5"], day=(s.get("n", 0) / ndays * s["per"]) if s.get("n") else NAN)
+        rows.append(r)
+    return rows
+
+
+def ladder_fig(lad, window, notes, question="How big an order still fills in full at our price, and what does it earn a day?"):
+    """Four panels against the starting notional (the clip 1% of it, log scale), a line a rule in its identity colour: the share of first orders filled in
+    full with the 90% decision line; the mean cents paid over the best ask; the net a day under the venue's FAK and under its FOK, zero the decision line.
+    One table: a row a rule and clip. `lad` maps a label ("E", "cell") to (title, ladder_rows)."""
+    fig, axes, axt, H = _canvas_tab(5.6, sum(len(r) for _, r in lad.values()), notes, question, window, nrows=2, ncols=2, hspace=0.5, wspace=0.2, below=0.8)
+    a1, a2, a3, a4 = axes
+    rows = []
+    for lab, (title, rr) in lad.items():
+        col, mk = RULE_COL.get(lab, MUTED), RULE_MK.get(lab, "o")
+        x = np.array([r["notional"] for r in rr], float)
+        a1.plot(x, [r["full"] for r in rr], color=col, marker=mk, ms=5, lw=1.9, zorder=4, label=title)
+        a2.plot(x, [r["cents"] for r in rr], color=col, marker=mk, ms=5, lw=1.9, zorder=4)
+        a3.plot(x, [r["fak"]["day"] for r in rr], color=col, marker=mk, ms=5, lw=1.9, zorder=4)
+        a4.plot(x, [r["fok"]["day"] for r in rr], color=col, marker=mk, ms=5, lw=1.9, zorder=4)
+        for r in rr:
+            rows.append([title.split(":")[0], f"{r['notional']:,.0f} ({r['clip']:g})", f"{r['full']:.0%}", f"{r['fill_share']:.0%}", f"{r['none']:.0%}", _f(r["cents"]),
+                         _f(r["fak"]["per"]), _f(r["fak"]["day"]), _f(r["fok"]["day"])])
+    ticks = [r["notional"] for r in next(iter(lad.values()))[1]]
+    for ax in axes:
+        ax.set_xscale("log")
+        ax.set_xticks(ticks)
+        ax.set_xticklabels([f"{t:,.0f}" for t in ticks], fontsize=7.5)
+        ax.minorticks_off()
+    a1.axhline(0.9, color=INK, ls=":", lw=1.2, zorder=3)
+    a1.text(ticks[0], 0.9, " 90% filled in full", va="bottom", fontsize=7.5, color=INK)
+    for ax in (a3, a4):
+        ax.axhline(0, color=INK, ls=":", lw=1.2, zorder=3)
+        ax.set_xlabel("starting notional, USD (the clip is 1% of it)", fontsize=8)
+    a1.set_title("first orders filled in full", fontsize=9.5, loc="left")
+    a1.set_ylabel("share of first orders")
+    a2.set_title("cents paid over the best ask (filled orders)", fontsize=9.5, loc="left")
+    a2.set_ylabel("cents a share")
+    a3.set_title("net a day, the venue's FAK (fill what rests, cancel the rest)", fontsize=9.5, loc="left")
+    a3.set_ylabel("USD a day")
+    a4.set_title("net a day, the venue's FOK (the whole clip or nothing)", fontsize=9.5, loc="left")
+    a1.legend(loc="lower left", fontsize=8, frameon=False)
+    tb = fs.put_table(axt, rows, ["Rule", "Notional (clip)", "Full", "Fill share", "No fill", "Cents over best", "FAK net an entry", "FAK net a day", "FOK net a day"], size=7.8)
+    _colw(tb, [0.17, 0.13, 0.07, 0.09, 0.08, 0.11, 0.12, 0.11, 0.12])
+    for i, r in enumerate(rows, 1):
+        fs.tint(tb, i, 2, "green" if float(r[2].rstrip("%")) >= 90 else "rose")
+    return fig
+
+
+def burst_masks(tab, cfg, feed=False):
     """The masks `tf15_oos.random_burst` reads for a stale cell, under the label "A" (whose pool is `nup_up`, `nup_dn` as given): every condition of the cell
     except the burst (the discount to fair value, the ask band, the stale definition over n seconds), and the time mask. The null buys at the ask seen, so for a
     cell whose limit is our edge price it fills a little less than the cell would."""
     nu, nd = C._stale_mask(tab, ("nup", cfg["theta"]))
     bu, bd = C._stale_mask(tab, ("band", cfg["band"]))
     su, sd = C.stale_masks(tab, cfg["kind"], cfg["n"])
-    return dict(nup_up=nu & bu & su, nup_dn=nd & bd & sd, tm=C.tmask(tab, cfg["t_min"]))
+    fl = C._stale_feed(tab) if feed else True                              # `feed`: the cell's feed mask, so the null draws live books only
+    return dict(nup_up=nu & bu & su & fl, nup_dn=nd & bd & sd & fl, tm=C.tmask(tab, cfg["t_min"]))
 
 
-def record_burst(tab, wf, draws=1000, seed=41, usd=B.CLIP_USD):
+def record_burst(tab, wf, draws=1000, seed=41, usd=B.CLIP_USD, feed=False):
     """The random-burst null of the walk-forward record: for each fold, the same count of entries per (day, coin) as its chosen cell made on its week, drawn
     from that week's seconds that pass every condition of the cell but the burst (`tf15_oos.random_burst` on the week's windows); each draw pools the folds
     (the total net over the total entries). -> dict(per (draws,), n (draws,), folds: list of random_burst dicts)."""
@@ -1593,7 +1742,7 @@ def record_burst(tab, wf, draws=1000, seed=41, usd=B.CLIP_USD):
             continue
         ts = tab.subset(np.isin(tab.day, f["out_idx"]))
         cfg = f["chosen"]["cfg"]
-        rb = O.random_burst(ts, e, burst_masks(ts, cfg), "A", t_min=cfg["t_min"], usd=usd, draws=draws, seed=seed + i)
+        rb = O.random_burst(ts, e, burst_masks(ts, cfg, feed), "A", t_min=cfg["t_min"], usd=usd, draws=draws, seed=seed + i)
         ok = np.isfinite(rb["per"])
         tot += np.where(ok, rb["per"], 0.0) * rb["n"]
         n += rb["n"]
@@ -1690,6 +1839,14 @@ def selftest(out=None, quiet=False) -> bool:
     wf = walk_forward(ents, gx, 3, week=1, n_min=60, levels=dict(TUNE_LEVELS, n=(3,)), e_name=gx[0]["name"])
     rec("the walk-forward chooses each week on the weeks before it only: (a) both times, so the record is (a) on days 1 and 2",
         [f["chosen"]["cfg"]["name"] for f in wf["folds"]] == [gx[0]["name"]] * 2 and np.isclose(wf["record"]["net"].sum(), 70 * (1.0 - 1.0)) and len(wf["record"]["net"]) == 140)
+    ev, _, _ = e_variant(t, cfg, feed=False)
+    rec("E's conditions rebuilt by e_variant (no change) equal BuyNearStale's entries", len(ev["net"]) == len(eh["net"]) and np.allclose(np.sort(ev["net"]), np.sort(eh["net"])))
+    ec, _, _ = e_variant(t, cfg, cap=0.45, feed=False)
+    rec("planted: a price cap of 0.45 keeps only the window whose ask is 0.40, and every fill is at or under the cap",
+        len(ec["net"]) == 1 and int(ec["w"][0]) == 1 and bool(np.all(ec["vwap"] <= 0.45 + 1e-9)))
+    pv = np.full((t.W, t.NK), 0.40)
+    ep, _, _ = e_variant(t, cfg, pu=pv, feed=False)
+    rec("planted: a fair value of 0.40 everywhere leaves no ask more than 5 c under it, so no entry", len(ep["net"]) == 0)
     rec("planted: a choice that also read the applied week would pick (b) on the last fold", choose_plateau(ents, gx, np.arange(3), 60, dict(TUNE_LEVELS, n=(3,)))[0]["cfg"]["name"] == gx[1]["name"])
     return bool(ok)
 

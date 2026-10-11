@@ -7,6 +7,8 @@ Each function takes the `entries` dict `tf15_bt.entries` returns (one numpy row 
     rolling_winrate_fig  the share of the last `win` entries that won, against break-even and a coin flip
     rolling_pnl_fig      the mean net of the last `win` entries, against zero
     entry_price_fig      the entry price against time, Up and Down markers, against the break-even price
+    paths_fig            several rules' cumulative net over time on one axes, and the same without each rule's best 5% of entries (2026-10-11)
+    weekly_ex5_fig       each week's cumulative net from zero, all entries and without the week's best 5%, PASS or FAIL a week, a row a rule (2026-10-11)
 
 Colours: a gain or a win is green, a loss red, the strategy's own series in MODEL, thresholds (break-even, zero) in ink and dotted, the coin-flip line muted.
 """
@@ -63,16 +65,26 @@ def gross_of(e):
     return None
 
 
-def fee_paths(ax, gross, net, col, lw=1.8, dot_lw=1.4, x0=0):
+def _dd_shade(ax, xx, c, label=None):
+    """The drawdown of the cumulative path `c` from its running peak, shaded red under the peak (the solid path only: the owner, 2026-10-11)."""
+    ax.fill_between(xx, c, np.maximum.accumulate(c), step="post", color=BAD, alpha=0.18, lw=0, zorder=2, label=label)
+
+
+def fee_paths(ax, gross, net, col, lw=1.8, dot_lw=1.4, x0=0, dd=False):
     """The two cumulative PnL paths over entries on `ax`: before the taker fee solid in `col`, after it ink and dotted; with `gross` None only the net, solid in `col`.
+    `dd` shades the drawdown from the running peak in red on the SOLID path only (before the fee; the net when it is drawn alone), never on the dotted one.
     -> the two cumulative arrays (each from zero; the first is None without a gross)."""
     xx = np.arange(x0, x0 + len(net) + 1)
     c_net = np.concatenate([[0.0], np.cumsum(net)])
     if gross is None:
         ax.step(xx, c_net, where="post", color=col, lw=lw, zorder=4, label="cumulative net")
+        if dd:
+            _dd_shade(ax, xx, c_net, "drawdown from the running peak")
         return None, c_net
     c_gr = np.concatenate([[0.0], np.cumsum(gross)])
     ax.step(xx, c_gr, where="post", color=col, lw=lw, zorder=4, label=LBL_GROSS)
+    if dd:
+        _dd_shade(ax, xx, c_gr, "drawdown before the fee, from its running peak")
     ax.step(xx, c_net, where="post", color=INK, lw=dot_lw, ls=DOT, zorder=6, label=LBL_NET)
     return c_gr, c_net
 
@@ -88,29 +100,28 @@ def _end_labels(ax, pairs):
                     va="bottom" if up else "top", fontsize=8, color=col, weight="bold", annotation_clip=False)
 
 
-def equity_fig(e, days, notes=None, question="How did the account build, entry by entry?", window=None, fees=True, bars=True):
-    """Top: the cumulative PnL over entries, before the taker fee as a solid line in the model identity and after it as an ink dotted path with a small dot per
-    entry (green won, red lost), each path's total at its right end, the zero line. With `bars` a second panel: each entry's net as a bar at its time (green gain,
+def equity_fig(e, days, notes=None, question="Does the rule make money after the taker fee?", window=None, fees=True, bars=True, who=None):
+    """Top: the cumulative PnL over entries, before the taker fee as a solid line in the model identity with its drawdown from the running peak shaded red,
+    and after it as an ink dotted path (no shading) with a small dot per entry (green won, red lost), each path's total at its right end, the zero line. With `bars` a second panel: each entry's net as a bar at its time (green gain,
     red loss). `fees=False` (or entries without a payoff and cost) draws the net alone, solid."""
     net = np.asarray(e["net"], float)
     won = np.asarray(e["won"], bool)
     gross = gross_of(e) if fees else None
     n = len(net)
     if notes is None:
-        notes = [f"{n:,} entries, {int(won.sum()):,} won ({won.mean() if n else float('nan'):.1%})."]
+        tot = float(net.sum())
+        notes = [f"{'Yes' if tot > 0 else 'No'}. {who or 'The rule'} nets {tot:+,.2f} USD after the taker fee, {float(net.mean()) if n else float('nan'):+.3f} an entry over {n:,} entries "
+                 f"({won.mean() if n else float('nan'):.1%} won)."]
         if gross is not None:
             g, f = float(gross.sum()), float(gross.sum() - net.sum())
-            notes.append(f"Before the taker fee {g:+,.2f} USD; the fee takes {f:,.2f}" + (f" ({f / g:.0%} of the gross)" if g > 0 else " (the gross is not positive)")
-                         + f"; after it {float(net.sum()):+,.2f} USD, {float(net.mean()) if n else float('nan'):+.3f} an entry.")
-        else:
-            notes.append(f"Net {float(net.sum()):+,.2f} USD, {float(net.mean()) if n else float('nan'):+.3f} an entry.")
+            notes.append(f"Before the fee it makes {g:+,.2f} USD; the fee takes {f:,.2f}" + (f" ({f / g:.0%} of that)." if g > 0 else ", so the loss starts before the fee."))
         if n:
             notes.append(f"Largest single win {float(net.max()):+.2f} USD, largest single loss {float(net.min()):+.2f} USD, after the fee.")
     if bars:
         fig, (ax, a2) = LF.frame(5.6, notes, question, window or _window_str(e, days), nrows=2, ratios=[3.0, 1.35], hspace=0.42, axis_pad=0.75)
     else:
         fig, (ax,) = LF.frame(3.8, notes, question, window or _window_str(e, days))
-    c_gr, c_net = fee_paths(ax, gross, net, MOD)
+    c_gr, c_net = fee_paths(ax, gross, net, MOD, dd=True)
     if n:
         ax.scatter(np.arange(1, n + 1), c_net[1:], s=3, c=[GOOD if w else BAD for w in won], zorder=5, edgecolors="none", alpha=0.6)
     _end_labels(ax, [(c_gr, MOD, "before"), (c_net, INK, "after" if c_gr is not None else "net")])
@@ -133,9 +144,13 @@ def equity_fig(e, days, notes=None, question="How did the account build, entry b
     return fig
 
 
-def trade_pnl_fig(e, days, notes=None, question="How much did each entry make, and when?", window=None):
+def trade_pnl_fig(e, days, notes=None, question="Do the wins and losses cluster in time?", window=None):
     """Per-trade net as a bar at the entry's timestamp (green gain, red loss), the zero line."""
     net = np.asarray(e["net"], float)
+    if notes is None and "day" in e and len(net):
+        d = np.bincount(np.asarray(e["day"], int), weights=net, minlength=len(days))
+        notes = [f"{int((d > 0).sum())} of {len(days)} days made money; the best day made {d.max():+,.0f} USD and the worst {d.min():+,.0f}, against a total of {float(net.sum()):+,.0f}.",
+                 f"{len(net):,} entries: {int(np.sum(net > 0)):,} gained and {int(np.sum(net <= 0)):,} lost."]
     notes = list(notes) if notes is not None else [f"{len(net)} entries; {int(np.sum(net > 0))} gained, {int(np.sum(net <= 0))} lost, total {float(net.sum()):+.2f} USD."]
     fig, (ax,) = LF.frame(3.6, notes, question, window or _window_str(e, days))
     x = _times(e)
@@ -183,13 +198,17 @@ def rolling_pnl_fig(e, days, notes=None, question="Does the mean entry stay abov
     return fig
 
 
-def entry_price_fig(e, days, notes=None, question="Do the entries that won buy cheaper than break-even?", be=0.607, window=None, s=52, edge=True):
+def entry_price_fig(e, days, notes=None, question="Do the entries that win pay less than the break-even price?", be=0.607, window=None, s=52, edge=True):
     """Entry price against time: Up entries as ^ and Down as v, each green won / red lost, the break-even price in ink dotted, a legend for the markers and the sign.
     `s` is the marker area and `edge` draws the ink outline; a study with thousands of entries passes a smaller `s` and `edge=False` (the outline is most of the PNG)."""
     vwap = np.asarray(e["vwap"], float)
     side = np.asarray(e["side"], int)
     won = np.asarray(e["won"], bool)
     up = side > 0
+    if notes is None and won.any() and (~won).any():
+        pw, pl = float(vwap[won].mean()), float(vwap[~won].mean())
+        notes = [f"{'Yes' if pw < be else 'No'}. Winning entries paid {pw:.3f} a share on average and losing ones {pl:.3f}, against a break-even price of {be:.3f}.",
+                 f"{int(up.sum()):,} Up and {int((~up).sum()):,} Down entries; {int(won.sum()):,} of {len(won):,} won."]
     notes = list(notes) if notes is not None else [f"{int(up.sum())} Up and {int((~up).sum())} Down entries; {int(won.sum())} of {len(won)} won, break-even price {be:.0%}."]
     fig, (ax,) = LF.frame(3.6, notes, question, window or _window_str(e, days))
     x = _times(e)
@@ -284,9 +303,9 @@ def _ci(e):
     return B.slot_boot(e["slot"], e["net"]) if len(e["net"]) else (np.nan, np.nan)
 
 
-def coin_panels_fig(e, days, notes=None, question="Does every coin carry the edge, or one of them?", window=None, fees=True):
+def coin_panels_fig(e, days, notes=None, question="Which coin makes the money?", window=None, fees=True):
     """One row of four panels, one a coin, on one USD scale: the cumulative PnL over the coin's entries before the taker fee (solid, the coin's identity colour)
-    and after it (ink, dotted), each path's total at its right end, the zero line. `fees=False` (or entries without a payoff and cost) draws the net alone, solid."""
+    with its drawdown from the running peak shaded red, and after it (ink, dotted, no shading), each path's total at its right end, the zero line. `fees=False` (or entries without a payoff and cost) draws the net alone, solid."""
     bul = notes
     if bul is None:
         bul = []
@@ -299,6 +318,11 @@ def coin_panels_fig(e, days, notes=None, question="Does every coin carry the edg
             lo, hi = _ci(sub)
             bul.append(f"{c.upper()}: {n} entries, {int(sub['won'].sum())} won ({sub['won'].mean():.0%}), net {sub['net'].sum():+.2f} USD, "
                        f"{sub['net'].mean():+.3f} an entry (95% by slot {lo:+.2f} to {hi:+.2f}).")
+        tots = {c: float(np.asarray(e["net"], float)[np.asarray(e["asset"]) == ai].sum()) for ai, c in enumerate(COINS) if (np.asarray(e["asset"]) == ai).any()}
+        if tots:
+            top, low = max(tots, key=tots.get), min(tots, key=tots.get)
+            n_pos = sum(v > 0 for v in tots.values())
+            bul.insert(0, f"{top.upper()} makes the most ({tots[top]:+,.2f} USD of the {sum(tots.values()):+,.2f} total) and {low.upper()} the least ({tots[low]:+,.2f}); {n_pos} of {len(tots)} coins make money.")
     fig, axes = LF.frame(3.3, bul, question, window or _window_str(e, days), ncols=4, wspace=0.12, axis_pad=0.95, sharey=True)
     with_gross = False
     for ai, c in enumerate(COINS):
@@ -309,7 +333,7 @@ def coin_panels_fig(e, days, notes=None, question="Does every coin carry the edg
         n = len(net)
         ax.set_title(f"{c.upper()} · {n:,} entries", fontsize=9.5, loc="left")
         if n:
-            c_gr, c_net = fee_paths(ax, gross, net, COIN_COL[c], lw=1.7, dot_lw=1.3)
+            c_gr, c_net = fee_paths(ax, gross, net, COIN_COL[c], lw=1.7, dot_lw=1.3, dd=True)
             with_gross = with_gross or c_gr is not None
             _end_labels(ax, [(c_gr, COIN_COL[c], ""), (c_net, INK, "")])
             ax.set_xlim(0, n * 1.22)
@@ -323,9 +347,9 @@ def coin_panels_fig(e, days, notes=None, question="Does every coin carry the edg
             ax.tick_params(labelleft=False)
     axes[0].set_ylabel("USD, cumulative")
     if with_gross:
-        h = [tuple(Line2D([], [], color=COIN_COL[c], lw=1.7) for c in COINS), Line2D([], [], color=INK, lw=1.3, ls=DOT)]
-        axes[0].legend(h, [LBL_GROSS + " (each coin in its own colour)", LBL_NET], handler_map={tuple: HandlerTuple(ndivide=None, pad=0.0)}, handlelength=4.0,
-                       loc="upper left", bbox_to_anchor=(0.0, -0.2), ncol=2, fontsize=8, frameon=False)      # under the row, never on the data
+        h = [tuple(Line2D([], [], color=COIN_COL[c], lw=1.7) for c in COINS), Line2D([], [], color=INK, lw=1.3, ls=DOT), Patch(facecolor=BAD, alpha=0.18, lw=0)]
+        axes[0].legend(h, [LBL_GROSS + " (each coin in its own colour)", LBL_NET, "drawdown before the fee, from its running peak"],
+                       handler_map={tuple: HandlerTuple(ndivide=None, pad=0.0)}, handlelength=4.0, loc="upper left", bbox_to_anchor=(0.0, -0.2), ncol=3, fontsize=8, frameon=False)      # under the row, never on the data
     return fig
 
 
@@ -351,7 +375,7 @@ def price_buckets(e):
     return pd.DataFrame(rows)
 
 
-def winloss_fig(e, days, notes=None, question="What do the winners and the losers look like, at which prices do they sit, and do a few wins carry everything?", window=None):
+def winloss_fig(e, days, notes=None, question="Do a few big wins carry the profit, or many small ones?", window=None):
     """Top row: the distribution of net an entry (won green, lost red); the mean net by price paid with its slot interval; the win rate by price paid (Wilson 95%) against
     the bucket's own break-even (an ink dotted path). Bottom row: each trade's own reward to risk (what it pays if it wins over the most it can lose, log scale, won green,
     lost red, even money as the decision line); the cumulative net with every entry against the same book without its best 5% of entries; the net an entry with the best 1%,
@@ -368,15 +392,14 @@ def winloss_fig(e, days, notes=None, question="What do the winners and the loser
     risk = np.asarray(e["cost"], float) + np.asarray(e["fee"], float)
     rr_t = (np.asarray(e["shares"], float) - risk) / np.maximum(risk, 1e-9)
     bul = notes if notes is not None else [
+        f"The best 5% of entries ({k5}) made {top5:+.2f} USD, {share} of {tot:+.2f}; without them the net is {S['per_ex_top5']:+.3f} an entry "
+        f"(95% by slot {S.get('per_ex_top5_lo', np.nan):+.2f} to {S.get('per_ex_top5_hi', np.nan):+.2f}; without the best 1% {S['per_ex_top1']:+.3f}, without the best 10% {S['per_ex_top10']:+.3f}): "
+        + ("many small wins carry it: the edge survives without its best wins." if S.get("per_ex_top5_lo", np.nan) > 0 else
+           "a few big wins carry it: the interval reaches zero without them." if S["per"] > 0 else "there is no edge to carry."),
         f"{n} entries: {int(won.sum())} won (mean {net[won].mean():+.2f} USD, median {np.median(net[won]):+.2f}), {int((~won).sum())} lost "
         f"(mean {net[~won].mean():+.2f}, median {np.median(net[~won]):+.2f}); largest win {net.max():+.2f}, largest loss {net.min():+.2f}.",
         f"Win rate {S['win']:.1%} (Wilson 95% {S['win_lo']:.1%} to {S['win_hi']:.1%}) against the {S['win_needed']:.1%} this payoff needs; reward to risk {S['rr']:.2f} "
-        f"(mean win over mean loss), profit factor {S['pf']:.2f}; each trade's own reward to risk averages {S['rr_trade_mean']:.2f} (median {S['rr_trade_median']:.2f}).",
-        f"The best 5% of entries ({k5}) made {top5:+.2f} USD, {share} of {tot:+.2f}; without them the net is {S['per_ex_top5']:+.3f} an entry "
-        f"(95% by slot {S.get('per_ex_top5_lo', np.nan):+.2f} to {S.get('per_ex_top5_hi', np.nan):+.2f}, {S.get('p_ex_top5_le0', np.nan):.0%} of the resamples at or below zero; "
-        f"without the best 1% {S['per_ex_top1']:+.3f}, without the best 10% {S['per_ex_top10']:+.3f}): "
-        + ("the edge survives without its best wins." if S.get("per_ex_top5_lo", np.nan) > 0 else
-           "the interval reaches zero, so the edge rests on its tail wins." if S["per"] > 0 else "there is no edge to carry."),
+        f"(mean win over mean loss), profit factor {S['pf']:.2f}.",
         f"By price paid the strongest bucket is {best.iloc[0]['bucket']} ({best.iloc[0]['per']:+.3f} an entry on {int(best.iloc[0]['n'])}, 95% by slot {best.iloc[0]['lo']:+.2f} to "
         f"{best.iloc[0]['hi']:+.2f}); the weakest is {best.iloc[-1]['bucket']} ({best.iloc[-1]['per']:+.3f} on {int(best.iloc[-1]['n'])}).",
     ]
@@ -499,10 +522,10 @@ def anatomy_fig(tab, e, i, days, question, notes=None, usd=20.0):
         how = f"The fill 150 ms later paid {vwap:.3f} a share for {shares:.2f} shares (cost {cost:.2f} USD, fee {fee:.2f}), never above the {ask[k]:.2f} ask seen at the decision."
     why = f"The size of the result is the position times the distance to settlement: {shares:.2f} shares x {(1 - vwap) if won else -vwap:+.3f} a share, less the {fee:.2f} fee."
     bul = notes if notes is not None else [
+        f"The order {'won: every share paid 1 USD' if won else 'lost: every share paid 0'}, net {net:+.2f} USD. {why}",
+        f"The {tok} token asked {ask[k]:.2f} and bid {bid[k]:.2f} against a driftless fair value of {fair[k]:.3f} (ask minus fair {ask[k] - fair[k]:+.3f}). {how}",
         f"{coin.upper()} window starting {start:%Y-%m-%d %H:%M} UTC; decision at second {kd} ({int(e['T'][i])} s left), Binance 10 s z {z:+.1f}, "
         f"the mid {move_bp:+.0f} bp from the window's start.",
-        f"The {tok} token asked {ask[k]:.2f} and bid {bid[k]:.2f} against a driftless fair value of {fair[k]:.3f} (ask minus fair {ask[k] - fair[k]:+.3f}). {how}",
-        f"It {'won: every share paid 1 USD' if won else 'lost: every share paid 0'}; net {net:+.2f} USD. {why}",
     ]
     win_s = f"{start:%Y-%m-%d %H:%M} UTC · one 15-minute window (0.25h) · {coin.upper()} · study window {days[0][5:]} to {days[-1][5:]}, {24 * len(days):,}h"
     fig, (a1, a2, a3) = LF.frame(8.6, bul, question, win_s, nrows=3, hspace=0.55)
@@ -571,7 +594,7 @@ def ladder_table(tab, e, i, usd=20.0):
     return df, cap
 
 
-def compare_fig(rows, days, notes, question="Which expression of the thesis pays, and which does not?", window=None):
+def compare_fig(rows, days, notes, question="Which versions of the burst trade make money, and which lose?", window=None):
     """Left: the net an entry of each test with its 95% slot interval (green gain, red loss). Right: the same on the first and second halves of the window
     (ink2 circles, ink squares)."""
     labels = [r["label"] for r in rows]
@@ -604,7 +627,7 @@ def compare_fig(rows, days, notes, question="Which expression of the thesis pays
     return fig
 
 
-def daily_fig(ents: dict, days, notes=None, question="Which days carried each test, and how bad was the worst?", window=None):
+def daily_fig(ents: dict, days, notes=None, question="Which days made the money, and how bad was the worst day?", window=None):
     """Six panels, one a test: the day's net as a bar (green gain, red loss) over the window, the worst day labelled."""
     nd = len(days)
     bul = notes
@@ -614,7 +637,8 @@ def daily_fig(ents: dict, days, notes=None, question="Which days carried each te
             d = np.bincount(np.asarray(e["day"], int), weights=np.asarray(e["net"], float), minlength=nd) if len(e["net"]) else np.zeros(nd)
             eq = np.cumsum(d)
             dd = float((np.maximum.accumulate(np.concatenate([[0.0], eq]))[1:] - eq).max())
-            bul.append(f"{lab}: worst day {days[int(np.argmin(d))]} at {d.min():+.0f} USD, {int((d < 0).sum())} of {nd} days lost, peak-to-trough on daily closes {dd:.0f} USD.")
+            bul.append(f"{lab}: best day {days[int(np.argmax(d))]} at {d.max():+.0f} USD, worst day {days[int(np.argmin(d))]} at {d.min():+.0f}; {int((d < 0).sum())} of {nd} days lost, "
+                       f"deepest fall on daily closes {dd:.0f} USD.")
     nrow = max(1, int(np.ceil(len(ents) / 2)))
     fig, axes = LF.frame(2.4 * nrow, bul, question, window or f"{days[0][5:]} to {days[-1][5:]} · {24 * nd:,}h · {nd} days", ncols=2, nrows=nrow, hspace=0.55, wspace=0.16)
     x = np.arange(nd)
@@ -633,7 +657,7 @@ def daily_fig(ents: dict, days, notes=None, question="Which days carried each te
     return fig
 
 
-def winrate_rr_fig(rows, days, notes, question="Does each test win often enough for the size of its wins against its losses?", window=None):
+def winrate_rr_fig(rows, days, notes, question="Does each test win often enough to pay for its losses?", window=None):
     """Left: each test's win rate with its Wilson 95% interval (the model identity) against the win rate its own payoff needs to break even
     (|mean loss| / (mean win + |mean loss|), an ink dotted path). Right: reward to risk (mean win over mean loss) as a bar, green where the win rate
     clears the needed rate and red where it does not, the profit factor written over each bar, even money as the decision line."""
@@ -804,4 +828,114 @@ def steady_fig(curves: dict, days, notes, question="Which variant climbs steadil
         ax.tick_params(labelsize=7.5)
     for ax in axes[len(names):]:
         ax.axis("off")
+    return fig
+
+
+# ============================================================ cumulative paths over time and the weeks without their best 5% (the owner, 2026-10-11)
+PATH_COL = {"A": MOD, "E": fs.IDENTITY["POLYMARKET"]}            # A the model colour, E the second identity the coins do not use; every other rule grey
+
+
+def ex_best(net, pct=5):
+    """`net` with its best ceil(pct% x n) entries set to zero (ties broken by position, the first kept highest). -> a copy."""
+    v = np.asarray(net, float).copy()
+    k = int(np.ceil(pct / 100.0 * len(v)))
+    if k:
+        v[np.argsort(-v, kind="stable")[:k]] = 0.0
+    return v
+
+
+def _day_edges(days):
+    d0 = datetime.strptime(days[0], "%Y-%m-%d")
+    return d0, d0 + timedelta(days=len(days))
+
+
+def paths_fig(ents: dict, days, notes, question="How did each test's account grow, and what is left without the best trades?", window=None):
+    """Top: each rule's cumulative net (after the fee) stepped over time, A and E in their identity colours, the rest grey, each end labelled with the rule and
+    its total, zero dotted ink, faint week verticals. Bottom: the same paths with each rule's best 5% of entries set to zero in the running sum."""
+    fig, (a1, a2) = LF.frame(6.6, notes, question, window or f"{days[0][5:]} to {days[-1][5:]} · {24 * len(days):,}h · {len(days)} days", nrows=2, hspace=0.38, axis_pad=0.7)
+    d0, d1 = _day_edges(days)
+    for ax, ex in ((a1, False), (a2, True)):
+        ends = []
+        for lab, e in ents.items():
+            net = np.asarray(e["net"], float)
+            if not len(net):
+                continue
+            v = ex_best(net) if ex else net
+            t = np.concatenate([[d0], _times(e) + timedelta(minutes=15)])
+            c = np.concatenate([[0.0], np.cumsum(v)])
+            col = PATH_COL.get(lab, N["muted"])
+            heavy = lab in PATH_COL
+            ax.step(t, c, where="post", color=col, lw=2.2 if heavy else 1.1, zorder=4 if heavy else 3)
+            ends.append((c[-1], lab, col, heavy))
+        # end labels, nudged apart so none sits on another
+        ends.sort()
+        lo, hi = ax.get_ylim()
+        gap = (hi - lo) * 0.065
+        placed = []
+        for y, lab, col, heavy in ends:
+            yy = y if not placed or y - placed[-1] >= gap else placed[-1] + gap
+            placed.append(yy)
+            ax.annotate(f" {lab} {y:+,.0f}", xy=(d1, yy), xycoords="data", va="center", fontsize=8.5, color=col, weight="bold" if heavy else "normal", annotation_clip=False)
+        ax.axhline(0, color=INK, ls=":", lw=1.1, zorder=2)
+        for i in range(0, len(days) + 1, 7):
+            ax.axvline(d0 + timedelta(days=i), color=N["grid"], lw=0.8, zorder=1)
+        ax.set_xlim(d0, d1 + timedelta(days=len(days) * 0.08))
+        ax.xaxis.set_major_locator(mdates.DayLocator(interval=max(1, len(days) // 12)))
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%m-%d"))
+        ax.set_ylabel("USD, cumulative after the fee")
+        ax.set_title("every entry" if not ex else "without each test's best 5% of entries (set to zero in the running sum)", fontsize=9.5, loc="left")
+    a2.set_xlabel("UTC day")
+    h = [Line2D([], [], color=PATH_COL[k], lw=2.2, label=f"test {k}") for k in PATH_COL if k in ents] + [Line2D([], [], color=N["muted"], lw=1.1, label="the other tests")]
+    a1.legend(handles=h, loc="upper left", ncol=len(h), fontsize=8, frameon=False)          # inside, top left: the end labels own the right edge
+    return fig
+
+
+def week_reads(e, tab, days, week=7, pct=5):
+    """Each week of `days` (the last may be short): entries, net an entry, the net without the week's best `pct`% with its slot interval (`tf15_bt.summarize`),
+    and the verdict, PASS when that net is above zero (a few lucky wins do not carry the week). -> list of dicts."""
+    import tf15_bt as B
+    out = []
+    for w0 in range(0, len(days), week):
+        idx = np.arange(w0, min(w0 + week, len(days)))
+        sub = B.subset(e, np.isin(np.asarray(e["day"]), idx))
+        sm = B.summarize(sub, tab, "") if len(sub["net"]) else {}
+        n = int(sm.get("n", 0))
+        ex = sm.get("per_ex_top5", np.nan)
+        out.append(dict(first=days[idx[0]], last=days[idx[-1]], n_days=len(idx), n=n, per=sm.get("per", np.nan), net=float(np.sum(sub["net"])) if n else 0.0,
+                        ex5=ex, ex5_lo=sm.get("per_ex_top5_lo", np.nan), ex5_hi=sm.get("per_ex_top5_hi", np.nan),
+                        verdict="PASS" if n and np.isfinite(ex) and ex > 0 else "FAIL", sub=sub))
+    return out
+
+
+def weekly_ex5_fig(reads: dict, days, notes, question="Do we still make money each week if we drop the few best trades?", window=None):
+    """One row a rule, the weeks side by side on one time axis: each week's cumulative net from zero at the week's start, every entry (the rule's identity
+    colour) and without the week's best 5% (muted grey); PASS (green) or FAIL (red) by the grey line's end; week edges as faint verticals."""
+    rules = list(reads)
+    fig, axes = LF.frame(2.7 * len(rules), notes, question, window or f"{days[0][5:]} to {days[-1][5:]} · {24 * len(days):,}h · {len(days)} days",
+                         nrows=len(rules), hspace=0.55, axis_pad=0.7)
+    d0, d1 = _day_edges(days)
+    for ax, lab in zip(axes, rules):
+        col = PATH_COL.get(lab, MOD)
+        for r in reads[lab]:
+            ws = datetime.strptime(r["first"], "%Y-%m-%d")
+            ax.axvline(ws, color=N["grid"], lw=0.9, zorder=1)
+            if not r["n"]:
+                continue
+            sub = r["sub"]
+            t = np.concatenate([[ws], _times(sub) + timedelta(minutes=15)])
+            c_all = np.concatenate([[0.0], np.cumsum(np.asarray(sub["net"], float))])
+            c_ex = np.concatenate([[0.0], np.cumsum(ex_best(sub["net"]))])
+            ax.step(t, c_all, where="post", color=col, lw=1.8, zorder=4)
+            ax.step(t, c_ex, where="post", color=N["muted"], lw=1.5, zorder=3)
+            ax.annotate(r["verdict"], xy=(t[-1], c_ex[-1]), xytext=(-2, 6), textcoords="offset points", ha="right", va="bottom", fontsize=8.5, weight="bold",
+                        color=GOOD if r["verdict"] == "PASS" else BAD, zorder=6)
+        ax.axhline(0, color=INK, ls=":", lw=1.0, zorder=2)
+        ax.set_xlim(d0, d1)
+        ax.set_xticks([datetime.strptime(r["first"], "%Y-%m-%d") for r in reads[lab]])
+        ax.set_xticklabels([f"{r['first'][5:]} to {r['last'][5:]}" for r in reads[lab]], fontsize=8)
+        ax.set_ylabel("USD, from the week's start")
+        npass = sum(r["verdict"] == "PASS" for r in reads[lab])
+        ax.set_title(f"test {lab}: {npass} of {len(reads[lab])} weeks pass without their best 5%", fontsize=9.5, loc="left")
+        h = [Line2D([], [], color=col, lw=1.8, label="every entry"), Line2D([], [], color=N["muted"], lw=1.5, label="without the week's best 5% of entries")]
+        ax.legend(handles=h, loc="lower right", bbox_to_anchor=(1.0, 1.0), ncol=2, fontsize=8, frameon=False)
     return fig

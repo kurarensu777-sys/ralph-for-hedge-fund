@@ -23,15 +23,18 @@ RAGGED = {"p": ("w", "t", "px", "sz", "side"), "e": ("w", "t", "S", "known", "si
 
 # ============================================================ the pooled table
 class Tab:
-    """The usable windows of several days, concatenated. `day` is the position of the window's day in `days`."""
+    """The usable windows of several days, concatenated. `day` is the position of the window's day in `days`. `decide_ms` picks the table whose gate reads
+    the book at t + decide_ms (`tf15_table`, THE CLOCK); 0, the default, loads the tables seated before 2026-10-11 (the gate at the Binance print). `ref` is
+    the fair value's start reference of a decide_ms > 0 table: "ptbb" the venue's price to beat with the Binance stream converted by the previous day's basis (the default), "ptb" the same without the basis (biased), "a0" the Binance start TWAP."""
 
     KEYS = ("S", "z", "sig", "pu", "zl", "qb", "qa", "qbs", "qas", "lad", "age", "known", "path")
 
-    def __init__(self, days, assets=None, fill_ms: int = 150):
+    def __init__(self, days, assets=None, fill_ms: int = 150, decide_ms: int = 0, ref: str = "ptbb"):
         self.days = list(days)
+        self.fill_ms, self.decide_ms, self.ref = int(fill_ms), int(decide_ms), ("a0" if int(decide_ms) == 0 else ref)
         parts = []
         for d in self.days:
-            arrs, meta = RN.load(d, fill_ms)
+            arrs, meta = RN.load(d, fill_ms, decide_ms, ref)
             ok = arrs["w_status"] == 0
             if assets is not None:
                 ok &= np.isin(arrs["w_asset"], list(assets))
@@ -79,6 +82,7 @@ class Tab:
         for k in self.KEYS + ("w_asset", "w_start", "w_up", "w_a0", "w_aend", "w_fee", "w_exp", "w_min", "w_ptb", "w_final", "w_first_ms", "day", "up", "slot"):
             setattr(out, k, getattr(self, k)[idx])
         out.W, out.NK, out.T, out.meta = len(idx), self.NK, self.T, self.meta
+        out.fill_ms, out.decide_ms = getattr(self, "fill_ms", None), getattr(self, "decide_ms", 0)
         remap = np.full(self.W, -1, np.int64)
         remap[idx] = np.arange(len(idx))
         for fam, cols in RAGGED.items():

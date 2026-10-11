@@ -1,13 +1,13 @@
-"""Build and execute `2026-10-11-predmkts-binance-burst-15m-updown-stale-book.ipynb` (um-023, 2026-10-11): test E of um-021 explored as a full strategy, the
-owner's word ("make a separate notebook that FULLY explores test E as a strategy: start with hyperparameter tuning, latency exploration, everything needed;
-reuse the charts we already have"). E is rule A (a 10 s Binance |z| of at least 3, the near token's ask more than 5 cents under the driftless fair value, at
-least 300 s left, buy the near token at its ask, hold to expiry) plus a book that has not moved (the near ask equals its ask 3 s earlier).
+"""Build and execute `2026-10-11-predmkts-binance-burst-15m-updown-stale-book.ipynb` (um-023): test E of um-021 as a full strategy. E is rule A (a 10 s Binance |z| of at
+least 3, the near token's ask more than 5 cents under the driftless fair value, at least 300 s left, buy the near token at its ask, hold to expiry) plus a book that has
+not moved (the near ask equals its ask 3 s earlier).
 
-The notebook reads E as built on all 38 seated days. Its S3 is the second pass of 2026-10-11 (the owner: "make sure we tune E well"): the first pass's
-1,944-cell grid on one split picked a spike that lost the test week, so the tuning is now 162 cells (stale window x definition x discount to fair value x fill limit, the rest
-at E's levels), scored by the net an entry without the best 5%, smoothed along the window, and chosen on an expanding walk-forward (every week from the second
-chosen on the weeks before it); the final cell is the plateau centre on every day. Robustness, risk and the gates on the final cell and on E side by side.
-Logic: `tf15_cands` (the stale masks), `tf15_stale` (the grid, the plateau rule, the walk-forward, the delay shift and the new figures), `tf15_bt`, `tf15_oos`,
+S3 tunes E: 162 cells (stale window x definition x discount to fair value x fill limit, the rest at E's levels), scored by the net an entry without the best 5%, smoothed
+along the window, and chosen on an expanding walk-forward (every week from the second on the weeks before it); the final cell is the plateau centre on every day.
+Robustness, risk and the gates run on the final cell and on E side by side.
+The engine: the gate reads the book 100 ms after the Binance print (`B.Tab(..., decide_ms=100)`, ref `ptbb`: fair value on the venue's price to beat, the Binance stream
+converted by the previous day's basis) and a decision on a slot-wide silent feed is refused (`BuyNearStale(feed=True)`, `near_tests(feed=True)`).
+Logic: `tf15_cands` (the stale masks), `tf15_stale` (the grid, the plateau rule, the walk-forward, the delay shift and the figures), `tf15_bt`, `tf15_oos`,
 `tf15_oos_figs`, `tf15_trade_figs`, `tf15_exits`, `tf15_live`, `tf15_capacity`.
 
 Run from `platform/research/studies` with the fund venv:
@@ -56,42 +56,22 @@ def code(s, *tags):
 
 # ================================================================================================ S0
 md(r'''
-# Buying the near token after a Binance burst while the book has not moved: which stale window, definition, discount to fair value and limit earn on weeks they were not chosen on, and what does a later order cost?
+# Does buying right after a Binance burst, while the book has not moved, still make money on weeks it was not tuned on?
 
 ## S0 · Summary
 
 **The thesis.** After a 3-sigma Binance burst the move persists, and a Polymarket 15-minute Up/Down book that has not re-priced it leaves the near token (the
-side the burst points to) under its driftless fair value. Test E of the buy-near tests (um-021) reads that mechanism directly: rule A plus the near ask equal
-to its ask 3 seconds earlier. On the 38 seated days it was the only rule of seven whose interval cleared zero. This notebook explores E as a strategy.
+side the burst points to) under its driftless fair value. Test E reads that mechanism directly: rule A (a burst, and a near ask more than 5 cents under fair value)
+plus a near ask equal to its ask 3 seconds earlier. This notebook asks whether E holds up when its settings are chosen week by week instead of fixed.
 
-**Second pass (2026-10-11), the owner: "make sure we tune E well."** The first pass searched seven dimensions on one train, validate and test split, and its
-best cell sat on a spike and lost the test week. This pass tunes only what the thesis gives a mechanism (the stale window, the definition of a book that has
-not moved, the discount to fair value, the fill limit), fixes the rest at E's levels, chooses every week on the weeks before it, and takes the centre of a plateau
-along the window instead of the best single cell.
+**What is tuned.** The stale window, what "has not moved for n seconds" means, the discount to fair value (3, 5 or 8 cents) and the fill limit: (a) the near ask
+equals its ask n seconds ago (E as built; an ask that moved and came back counts), (b) it is unchanged at every second of the last n, (c) it and its size at the
+touch are unchanged; the limit is the ask seen at the decision second (E as built) or our edge price, fair value less the discount. Each week is traded with the
+setting chosen on the weeks before it, taken at the centre of a plateau along the window rather than at the best single cell.
 
-**What it holds.**
-
-| Part | Question |
-|---|---|
-| S3.1 | E as it stands on 38 days: the summary, the equity, each entry, each coin, the prices paid, the winners and losers, the biggest win and loss on the book |
-| S3.2 | The surface: every cell of the small grid (window x definition x discount to fair value x limit) on every seated day, described, not chosen |
-| S3.3 | The walk-forward: each week from the second chosen on the weeks before it by the plateau rule, E tuned against E as built and rule A on the same days |
-| S3.4 | Is the choice stable from week to week, and does the week it is applied to agree |
-| S3.5 | The final cell (the plateau centre on every day), its honest read, the latency ladder, the fee sweep and its live spec |
-| S4 | Out of sample and luck, latency from 150 ms to 5,250 ms (per entry, in dollars, and which entries a later order loses), fees and slippage, slices, steadiness, exits, on the final cell and on E |
-| S5 | The daily record, the drawdown, concentration and the pre-registered stop |
-| S6 | Capacity under both fill limits, the gates, the size or "information only" |
-| S7 | The verdict and the next bet |
-
-**Three definitions of a book that has not moved** (n seconds): (a) the near ask now equals the near ask n seconds ago (E as built: endpoints only, so an ask
-that moved and came back counts); (b) the near ask is unchanged at every second of the last n; (c) the near ask and its size at the touch are unchanged at every
-second (nobody traded or re-quoted the touch). The Down token's ask is 1 minus the Up bid, so for a Down buy the Up bid and its size are read.
-
-**Two fill limits:** the ask seen at the decision second (E as built: the order takes what rests at or under it 250 ms later and stops) and our edge price,
-fair value less the discount (every level under it still carries the edge the rule asks for). In this pass the limit is a tuned dimension.
-
-**Engine caveats (the timing audit of 2026-10-11).** The gate reads the book at the Binance print, before a live order could know of it, and a frozen feed
-passes "the book has not moved" by construction; neither is corrected in the engine this run used. Both are counted where they bite (S3.3, S4.2, S7).
+**The engine.** The gate reads the book 100 ms after the Binance print and the order meets the ladder 250 ms after it [U]. A decision is refused when every book of
+its 15-minute slot is silent, because a frozen feed passes "has not moved" by construction. Fair value starts from the venue's published price to beat, with the
+Binance stream converted into its terms by the previous day's median basis per coin; a window with no published price to beat is left out.
 ''')
 
 
@@ -108,7 +88,7 @@ md(r'''
 ''')
 
 PARAMS = f'''
-# ---- the study's parameters; the second-pass grid names its own levels here and in tf15_stale.TUNE_LEVELS (asserted equal, registered before any cell is scored) ----
+# ---- the study's parameters; the grid names its own levels here and in tf15_stale.TUNE_LEVELS (asserted equal, registered before any cell is scored) ----
 STUDY_ID = "{STEM}"
 RUN_ID = "um-023"
 DESK = "lab/predmkts"
@@ -116,13 +96,16 @@ DAYS = {DAYS!r}
 WEEK = {WEEK}                                                 # walk-forward weeks by day index; also the tf15_oos fold length
 TUNE_LEVELS = dict(kind=("a", "b", "c"), n=(1, 2, 3, 4, 5, 6, 8, 10, 12), theta=(0.03, 0.05, 0.08), limit=("ask", "edge"))   # theta: the discount to fair value, USD a share (3, 5, 8 c)
 TUNE_FIXED = dict(z_min=3.0, L=10, t_min=300, band="any")      # E's own levels: |z| 3 over 10 s, at least 300 s left, any ask band
-N_REGISTERED = 162                                            # 9 windows x 3 definitions x 3 discounts to fair value (3, 5, 8 c) x 2 limits (the ledger note of 2026-10-11)
+N_REGISTERED = 162                                            # 9 windows x 3 definitions x 3 discounts to fair value (3, 5, 8 c) x 2 limits
 E_CELL = dict(kind="a", n=3, theta=0.05, limit="ask")          # test E of um-021 as built
 TUNE_N_MIN = {N_MIN_CHOOSE}                                           # a cell is chosen only with at least this many entries on the choosing weeks
 STABLE_MIN = {STABLE_MIN}                                             # G-stable: the chosen window the same in at least this many folds
 CLIP_USD, BOOK_USD = 20.0, 1000.0
 VENUE_HOLD_MS, OWN_MS = 150, 100                         # the venue's taker hold [1]; our own tick-to-trade, ASSUMED until measured live [U]
-LAT_MS = VENUE_HOLD_MS + OWN_MS
+LAT_MS = VENUE_HOLD_MS + OWN_MS                          # the order meets the ladder this long after the Binance print
+DECIDE_MS = OWN_MS                                       # the gate reads the book this long after the print: the soonest we can know of it [U]
+REF = "ptbb"                                             # the fair value's reference: the price to beat, the Binance stream converted by the previous day's median basis per coin
+FEED = True                                              # the feed mask: no decision when every book of the 15-minute slot is 2 s old or older
 EXTRA_S = (1, 2, 3, 5)                                   # whole seconds added to the 250 ms table: 1,250 to 5,250 ms
 FEE_MULTS = (0.0, 0.5, 1.0, 1.5, 2.0, 3.0)
 SLIPS = (0.0, 0.01, 0.02)                                # the limit raised over the ask seen, USD a share
@@ -148,30 +131,26 @@ LF.setup()
 plt.rcParams["figure.dpi"] = 72
 assert TUNE_LEVELS == ST.TUNE_LEVELS and TUNE_FIXED == ST.TUNE_FIXED, "the parameters are not the module's grid"
 t0 = time.time()
-TAB = B.Tab(DAYS, fill_ms=LAT_MS)
+TAB = B.Tab(DAYS, fill_ms=LAT_MS, decide_ms=DECIDE_MS, ref=REF)
 ALL_IDX = np.arange(len(DAYS))
-CAND = C.BuyNearStale()
+CAND = C.BuyNearStale(feed=FEED)
+CAND_RAW = C.BuyNearStale(feed=False)                      # the same rule without the feed mask: only for the live replay, which has none
 CFG_E = ST.tune_cell(**E_CELL)
 CFG_A = dict(CFG_E, n=0, name="A")
 E_ALL = B.concat(CAND.run(TAB, CFG_E, {}))
 A_ALL = B.concat(CAND.run(TAB, CFG_A, {}))
-import inspect
-_NOFEED = {"feed": False} if "feed" in inspect.signature(C.near_tests).parameters else {}       # this run is on the engine without the feed mask (see S0)
-TESTS_U21, MASKS_U21 = C.near_tests(TAB, **_NOFEED)        # um-021's own code: E and A here must be its tests E and A
+TESTS_U21, MASKS_U21 = C.near_tests(TAB, feed=FEED)       # um-021's own code: E and A here must be its tests E and A, on the same table and feed mask
 _same = lambda a_, b_: len(a_["net"]) == len(b_["net"]) and np.array_equal(a_["w"], b_["w"]) and np.array_equal(a_["k"], b_["k"]) and np.allclose(a_["net"], b_["net"])
 assert _same(E_ALL, TESTS_U21["E"]) and _same(A_ALL, TESTS_U21["A"]), "the grid's E or A cell is not um-021's test"
 S_E, S_A = ST.stats5(E_ALL), ST.stats(A_ALL)
 HALF = len(DAYS) // 2
 FIGURES = []
-WIN = f"{DAYS[0][5:]} to {DAYS[-1][5:]} · {24 * len(DAYS):,}h · {len(DAYS)} days · one regime · the fill {LAT_MS} ms after the decision"
+WIN = f"{DAYS[0][5:]} to {DAYS[-1][5:]} · {24 * len(DAYS):,}h · {len(DAYS)} days · one regime · gate {DECIDE_MS} ms, fill {LAT_MS} ms after the print · feed mask on"
 ASSET = list(TF.COINS)
 N_AXIS = figstyle.NEUTRAL["axis"]
 sgn = lambda v_, d_=2: "n/a" if v_ is None or not np.isfinite(v_) else f"{v_:+,.{d_}f}"
 pct = lambda v_, d_=1: "n/a" if v_ is None or not np.isfinite(v_) else f"{v_ * 100:.{d_}f}%"
-OLD_E = ST.old_book(TAB, E_ALL)                            # the timing audit's frozen-feed entries (a book row 2 s old or more), still in this engine
-FEED_LIVE = C.feed_live(TAB) if hasattr(C, "feed_live") else None      # the feed mask another change adds (every book of the slot silent = a hole); counted, not applied
-silent = lambda e_: (int((~FEED_LIVE[e_["w"], e_["k"]]).sum()), float(np.asarray(e_["net"])[~FEED_LIVE[e_["w"], e_["k"]]].sum())) if FEED_LIVE is not None and len(e_["net"]) else (0, 0.0)
-SILENT_E = silent(E_ALL)
+FEED_LIVE = C.feed_live(TAB)                               # the feed mask the rule applies: False where every book of the slot is silent
 
 def row(label, s):
     if not s.get("n"):
@@ -195,25 +174,23 @@ md(r'''
 
 | Item | Value | Source |
 |---|---|---|
-| The venue's taker hold | 150 ms: a marketable order on a crypto market is held before matching | venue changelog [1] |
-| Our own tick-to-trade | 100 ms, ASSUMED until a live measurement replaces it | the owner, 2026-10-10 [U] |
-| The delay in the engine | 250 ms, the two added: the order meets the ladder as it stood 250 ms after the decision second | this study |
-| Taker fee | shares x rate x p x (1 - p); 0.07 on the crypto category (`fee.category_rates` [1], read 2026-10-10); every market's own `feeSchedule.rate` read live into the table [API] | venue facts `fee.formula`, `fee.category_rates` [1]; market rows [API] |
+| Taker hold | 150 ms: a marketable order on a crypto market is held before matching | venue changelog [1] |
+| Our own tick-to-trade | 100 ms, assumed until measured live | [U] |
+| Delay in the engine | 250 ms in all: the order meets the ladder as it stood 250 ms after the Binance print, and the gate reads the book 100 ms after it | [U] |
+| Taker fee | shares x rate x p x (1 - p); 0.07 on the crypto category, each market's own `feeSchedule.rate` read live | `fee.formula`, `fee.category_rates` [1], read 2026-10-10; market rows [API] |
 | Minimum order | 5 shares | market rows [API] |
-| Fair value | driftless Brownian P(Up) of the 60 s TWAP, no momentum term | the 15-minute study (B-0642) |
-| Clip and book | USD 20 a trade of the near token, USD 1,000 book, 1x, one entry a window, hold to expiry | the brief |
-| Exits | none: every exit lost through the real bid ladder in um-016 and um-018; S4.6 confirms it for E | the ledger |
-| The stop | the paper run stops for the day after a day's loss of USD 60 (three clips), written before the grid ran | [U] |
-| The drawdown limit | USD 150, 15% of the book, written before the grid ran | [U] |
-| The steadiness gate | the daily equity line's r-squared at least 0.80 | [U] |
-| Forward days | 10-10 onward are not read here: they are the forward read of the final cell | the brief |
-| The gate's clock | the gate reads the book as of the Binance print; a live order learns of the print later, so the gate is early by our own latency (not corrected here) | timing audit, 2026-10-11, finding 2 |
-| Frozen feeds | a book row 2 s old or more passes "the book has not moved" by construction; such entries are not masked in this engine (counted in S3.3 and S7) | timing audit, finding 3 |
+| Fill model | FAK at the ask seen: it fills what rests at or under it, keeps the fill from 5 shares, and a miss retries at the next decision second. S6 also reads FOK (fills entirely or cancels) and FAK with the limit at fair value less the discount | Polymarket order types [1], no fact card yet |
+| Fair value | driftless Brownian P(Up) of the 60 s TWAP of Binance prices, against the venue's price to beat, the Binance stream converted into its terms by the previous day's median basis per coin | price to beat per market [API]; Binance spot aggTrades |
+| Silent feeds | a decision is refused when every book of its 15-minute slot is 2 s old or older: a hole in the archive, not a quiet market | `tf15_cands.feed_live` |
+| Clip and book | USD 20 a trade of the near token, USD 1,000 book, 1x, one entry a window, hold to expiry | the study's setting |
+| Exits | none: every exit lost through the real bid ladder in um-016 and um-018; S4.6 checks it for E | um-016, um-018 |
+| Limits | daily stop USD 60 (three clips), drawdown limit USD 150, steadiness r-squared at least 0.80 | set before the grid ran [U] |
+| Forward days | 10-10 onward are not read here | held for a forward read |
 
-## S2 · Data checks
+## S2 · Data checks - Can we trust the data and the engine?
 
-Every input is a seated decision table read through `fundplat.data` (`tf15_runner.py`), one UTC day at a time, from the Binance spot aggTrades and the
-pinned Polymarket Up-token ladders, at a 250 ms fill (and 150, 500 and 1,000 ms for S4.2). The checks below count into `verify`.
+Inputs are the seated decision tables, one UTC day each, built from Binance spot aggTrades and the pinned Polymarket Up-token ladders at a 250 ms fill (150, 500 and
+1,000 ms for S4.2). The checks below count into `verify`.
 ''')
 
 code(r'''
@@ -247,9 +224,10 @@ def invariants(e, cfg):
             ("the fee is positive and at most rate x 0.25 a share", bool(np.all((e["fee"] > 0) & (e["fee"] <= rate * 0.25 * e["shares"] + 1e-9)))),
             (f"every decision had at least {cfg['t_min']} s left", bool(np.all(e["T"] >= cfg["t_min"]))),
             ("one entry a window", len(set(w.tolist())) == len(w)),
-            ("every entry's decision second passed the burst, the discount to fair value, the band and the stale condition, on the burst's side", gate_ok)]
+            ("every entry's decision second passed the burst, the discount to fair value, the band and the stale condition, on the burst's side", gate_ok),
+            ("no entry sits on a slot-wide silent feed (every book of its slot 2 s old or older)", bool(np.all(FEED_LIVE[w, k])))]
 INV_E = invariants(E_ALL, CFG_E)
-display(Markdown("**The eight invariants on E's entries**\n\n" + pass_table(INV_E)))
+display(Markdown("**The nine invariants on E's entries**\n\n" + pass_table(INV_E)))
 assert all(ok for _, ok in INV_E), "an entry invariant failed"
 VERIFY_PASSED, VERIFY_TOTAL = VERIFY_PASSED + sum(ok for _, ok in INV_E), VERIFY_TOTAL + len(INV_E)
 ''')
@@ -277,7 +255,7 @@ display(Markdown(f"**Causality of the stale masks** (on the first day's {_t1.W} 
 assert all(ok for _, ok in CAUSAL)
 VERIFY_PASSED, VERIFY_TOTAL = VERIFY_PASSED + sum(ok for _, ok in CAUSAL), VERIFY_TOTAL + len(CAUSAL)
 del _t1
-# ---- the registered grid of the second pass, asserted before any cell is scored ----
+# ---- the registered grid, asserted before any cell is scored ----
 TUNE_CELLS = ST.tune_grid(TUNE_LEVELS)
 assert len(TUNE_CELLS) == N_REGISTERED and len({c_["name"] for c_ in TUNE_CELLS}) == N_REGISTERED, "the grid is not the registered grid"
 assert CFG_E["name"] in {c_["name"] for c_ in TUNE_CELLS}, "E is not a cell of the grid"
@@ -290,25 +268,24 @@ code(r'''
 import tf15_live as LV
 _t = time.time()
 _mk = lambda n_: LV.LayeredRule(L=10, z_min=3.0, theta=0.05, band=C.STALE_BANDS["any"], t_min=300, stale_s=n_)
-LIVE_E = LV.agree(E_ALL, LV.replay(TAB, _mk(3), LAT_MS), verbose=False)
-LIVE_P = LV.agree(E_ALL, LV.replay(TAB, _mk(2), LAT_MS), verbose=False)
-LIVE = [(f"LayeredRule(stale_s=3) makes E's {LIVE_E['n_vec']:,} entries and no other, to the cent", bool(LIVE_E["ok"] and LIVE_E["n_vec"] >= 20)),
+E_RAW = B.concat(CAND_RAW.run(TAB, CFG_E, {}))           # tf15_live has no feed mask, so the replay reads the rule without it on the same table
+LIVE_E = LV.agree(E_RAW, LV.replay(TAB, _mk(3), LAT_MS), verbose=False)
+LIVE_P = LV.agree(E_RAW, LV.replay(TAB, _mk(2), LAT_MS), verbose=False)
+LIVE = [(f"LayeredRule(stale_s=3) makes the unmasked E's {LIVE_E['n_vec']:,} entries and no other, to the cent (tf15_live has no feed mask; the mask removes {LIVE_E['n_vec'] - len(E_ALL['net']):,} of them)",
+         bool(LIVE_E["ok"] and LIVE_E["n_vec"] >= 20)),
         (f"planted: stale_s = 2 differs ({LIVE_P['only_vec']:,} entries only in E, {LIVE_P['only_live']:,} only in the planted rule)", not LIVE_P["ok"])]
 display(Markdown(f"**The live form** (replayed in {time.time() - _t:.0f}s)\n\n" + pass_table(LIVE)))
 VERIFY_PASSED, VERIFY_TOTAL = VERIFY_PASSED + sum(ok for _, ok in LIVE), VERIFY_TOTAL + len(LIVE)
-GATES.append({"id": "G2", "section": "S2", "label": "Live replay agrees", "name": "E decided one second at a time by tf15_live reproduces the vectorised entries exactly, and a planted window of 2 s differs",
+GATES.append({"id": "G2", "section": "S2", "label": "Live replay agrees", "name": "E without the feed mask, decided one second at a time by tf15_live (which has no feed mask), reproduces the vectorised entries exactly, and a planted window of 2 s differs",
               "reading": f"{LIVE_E['n_vec']:,} entries, only-vectorised {LIVE_E['only_vec']}, only-live {LIVE_E['only_live']}; planted differs: {not LIVE_P['ok']}",
               "verdict": "PASS" if all(ok for _, ok in LIVE) else "FAIL", "would_change": "a single entry that differs"})
 ''')
 
 # ================================================================================================ S3
 md(r'''
-## S3 · Core result
+## S3 · Core result - Does the rule still make money when its setting is chosen week by week?
 
-### S3.1 · Test E as it stands
-
-E exactly as um-021 read it, on every seated day: the summary, the equity, each entry, each coin, the prices paid, the winners and losers, and the biggest win
-and loss replayed on the book.
+### S3.1 · Did test E make money over every seated day?
 ''')
 
 code(r'''
@@ -319,24 +296,25 @@ display(Markdown(f"**Test E on {len(DAYS)} days.** {S_E['n']:,} entries, win rat
                  f"Rule A on the same days: {sgn(S_A['per'], 3)} on {S_A['n']:,} ({sgn(S_A['per_ex_top5'], 3)} without the best 5%)."))
 _rows = [row(f"E whole ({len(DAYS)} days)", S_E), row("E first half", _sf), row("E second half", _ss)]
 _rows += [row(f"E {a_.upper()}", ST.stats(B.subset(E_ALL, E_ALL["asset"] == i_))) for i_, a_ in enumerate(ASSET)]
+_rows += [row("E buying Up", ST.stats(B.subset(E_ALL, E_ALL["side"] > 0))), row("E buying Down", ST.stats(B.subset(E_ALL, E_ALL["side"] < 0)))]
 _rows += [row(f"A whole ({len(DAYS)} days)", S_A)]
 display(HTML(pd.DataFrame(_rows).round(3).to_html(index=False, border=0)))
 ''')
 
 code(r'''
-figstyle.show(TF.equity_fig(E_ALL, DAYS, question="How did test E build the account, entry by entry?"), "fig:s3-e-equity", FIGURES)
+figstyle.show(TF.equity_fig(E_ALL, DAYS, question="Does buying after a burst, when the book has not moved, make money?", who="Test E (buy after a burst when the near ask has not moved for 3 s)"), "fig:s3-e-equity", FIGURES)
 ''', "fig:s3-e-equity")
 code(r'''
-figstyle.show(TF.trade_pnl_fig(E_ALL, DAYS, question="How much did each entry of test E make, and when?"), "fig:s3-e-tradepnl", FIGURES)
+figstyle.show(TF.trade_pnl_fig(E_ALL, DAYS, question="Do test E's wins and losses cluster in time?"), "fig:s3-e-tradepnl", FIGURES)
 ''', "fig:s3-e-tradepnl")
 code(r'''
-figstyle.show(TF.coin_panels_fig(E_ALL, DAYS, question="Does every coin carry test E's edge, or one of them?"), "fig:s3-e-coins", FIGURES)
+figstyle.show(TF.coin_panels_fig(E_ALL, DAYS, question="Which coin makes the money in test E?"), "fig:s3-e-coins", FIGURES)
 ''', "fig:s3-e-coins")
 code(r'''
-figstyle.show(TF.entry_price_fig(E_ALL, DAYS, be=float(S_E["breakeven"]), question="Do test E's entries that won buy cheaper than break-even?", s=22, edge=False), "fig:s3-e-entrypx", FIGURES)
+figstyle.show(TF.entry_price_fig(E_ALL, DAYS, be=float(S_E["breakeven"]), question="Do test E's winning entries pay less than the break-even price?", s=22, edge=False), "fig:s3-e-entrypx", FIGURES)
 ''', "fig:s3-e-entrypx")
 code(r'''
-figstyle.show(TF.winloss_fig(E_ALL, DAYS, question="What do test E's winners and losers look like, at which prices do they sit, and do a few wins carry everything?"), "fig:s3-e-winloss", FIGURES)
+figstyle.show(TF.winloss_fig(E_ALL, DAYS, question="Do a few big wins carry test E?"), "fig:s3-e-winloss", FIGURES)
 ''', "fig:s3-e-winloss")
 code(r'''
 _i = int(np.argmax(E_ALL["net"]))
@@ -352,34 +330,19 @@ display(Markdown("**" + _cap + "**")); display(HTML(_df.round(4).to_html(index=F
 ''', "fig:s3-e-bigloss")
 
 md(r'''
-### How the tuning works, in plain words
+### How is a setting chosen each week?
 
-We split the 38 days into weeks by date: 09-02 to 09-08, 09-09 to 09-15, 09-16 to 09-22, 09-23 to 09-29, 09-30 to 10-06 and 10-07 to 10-09 (three days). From
-the second week on, we pick the best setting (the stale window in seconds, the stale definition, the discount to fair value, the fill price limit) using ONLY
-the weeks before it, then trade that setting on the week itself. Week one is only ever chosen on, never traded. Two questions follow.
+The days are cut into weeks by date. From the second week on, the setting is chosen on the weeks before it only and traded on that week alone; week one is only
+ever chosen on. Each setting is scored by its net an entry without the best 5% of entries, averaged with its neighbouring stale windows (same definition, discount
+and limit) so a lone lucky window cannot win; settings with fewer than `TUNE_N_MIN` entries are skipped, and a tie goes to the shorter window.
 
-1. **Is the pick the same week after week?** If the weeks before 09-09 say "3 seconds" and the weeks before 09-16 say "10 seconds", the data is not telling us
-   one number; a real setting gets picked again and again. We count how many of the five picks choose the same stale window. PASS: at least 4 of 5 agree.
-2. **Does the week a pick is traded on agree with the weeks it was chosen from?** The pick was made without that week, so its result there is honest. We put
-   side by side what the pick earned on its choosing weeks (in-sample) and on the week it was then traded on (out-of-sample), without the best 5% of entries
-   each time. Agree: the out-of-sample number is above zero and inside the in-sample number's 95% interval. Collapse: the choosing weeks fooled us. PASS: at
-   least 4 of 5 weeks agree.
+Two checks follow: is the pick the same stale window week after week (gate G4), and does each traded week agree with the weeks it was chosen from, meaning above
+zero without the best 5% and inside the in-sample 95% interval (gate G15)? Beside them, does the tuned rule beat test E as built on the same traded days? If not,
+tuning added nothing (gate G3).
 
-Beside both, the money question: over the 31 traded days (09-09 to 10-09), does the tuned rule beat test E as built (3 s, definition (a), 5 c, the ask seen)?
-If it does not, tuning added nothing.
+### S3.2 · Which settings earn over every seated day?
 
-How a pick is made on its choosing weeks: every setting is scored by its net an entry without the best 5%; each score is averaged with the scores of the
-neighbouring stale windows (same definition, discount and limit), so a lone lucky window cannot win; settings with fewer than `TUNE_N_MIN` entries are
-skipped; the highest wins, a tie going to the shorter window.
-
-### S3.2 · The surface on every seated day
-
-**In one line:** every setting on all 38 days at once, a map of where the rule earns; it chooses nothing, because it has seen every day.
-
-The second pass keeps only what the thesis gives a mechanism: how long the book has not moved (the window n), what "not moved" means (the three
-definitions), how far under fair value the ask must sit (the discount to fair value: 3, 5 or 8 cents) and how high the order may pay (the ask seen, or our edge price). Everything else stays at
-E's levels. The surface reads every cell on every seated day: it describes and chooses nothing; the walk-forward in S3.3 does the choosing. The first pass's
-grid, sweep and figures are in git (`ce8039d9`).
+Every setting on every seated day at once. It describes where the rule earns and chooses nothing; S3.3 does the choosing.
 ''')
 
 code(r'''
@@ -400,27 +363,21 @@ print(f"{len(TUNE):,} cells run and read in {TUNE_SECONDS:.0f}s; the plateau cen
 _e, _best = SURF[CFG_E["name"]], SURF_DF.sort_values("ex5", ascending=False).iloc[0]
 _bk = SURF_DF.groupby("definition")["ex5"].mean()
 _bl = SURF_DF.groupby("limit")["ex5"].mean()
-_notes = [f"{int((SURF_DF.ex5 > 0).sum())} of {len(SURF_DF)} cells are above zero without the best 5% over the {len(DAYS)} days; {int((SURF_DF.ex5_lo > 0).sum())} have the 95% slot interval of that number clear of zero (bold).",
+_notes = [f"{int((SURF_DF.ex5 > 0).sum())} of {len(SURF_DF)} settings earn money even without the few best trades over the {len(DAYS)} days; {int((SURF_DF.ex5_lo > 0).sum())} of them have the 95% interval by slot clear of zero (bold).",
           f"E as built ({CFG_E['name']}): {sgn(_e['per_ex_top5'])} without the best 5% (95% {sgn(_e['per_ex_top5_lo'])} to {sgn(_e['per_ex_top5_hi'])}) on {_e['n']:,} entries, {sgn(_e['per'])} an entry with them.",
           f"The best single cell is {_best.cell}, {sgn(_best.ex5)} ({sgn(_best.ex5_lo)} to {sgn(_best.ex5_hi)}) on {int(_best.entries):,}; the plateau rule on every day picks {CFG['name']} "
           f"(smoothed {sgn(FINAL_ROW['smoothed'])}, its own {sgn(FINAL_ROW['score'])}), " + ("which is E as built." if FINAL_IS_E else "read in S3.5."),
           "Mean over cells, by definition: " + ", ".join(f"({k_}) {v_:+.2f}" for k_, v_ in _bk.items()) + "; by limit: " + ", ".join(f"{k_} {v_:+.2f}" for k_, v_ in _bl.items())
           + ". A description: neighbouring cells share most of their entries.",
-          "Every cell is read on the same days, so the surface is one observation re-sliced; the walk-forward in S3.3 is the read that could have failed."]
+          "Every cell is read on the same days, so the surface is one observation re-sliced; S3.3 is the read that could have failed."]
 figstyle.show(ST.surface_all_fig(SURF, TUNE_CELLS, CFG_E["name"], CFG["name"], WIN, _notes, TUNE_LEVELS), "fig:s3-surface", FIGURES)
 ''', "fig:s3-surface")
 
 md(r'''
-### S3.3 · The walk-forward: every week out of sample once
+### S3.3 · Does picking the setting from past weeks beat the plain 3-second rule?
 
-**In one line:** the solid and dotted lines are the 31 days from 09-09 to 10-09, each week traded with the setting chosen before it; beside them, E as built
-(3 s) on the same days. If the tuned line does not beat the built line out of sample, tuning added nothing (gate G3).
-
-Weeks by day index (the last is short). For each week from the second, the plateau rule chooses on every week before it (an expanding window) and the
-chosen cell trades that week alone; the first week is never scored out of sample. The rule: score each cell by its net an entry without the best 5% on the
-choosing weeks, smooth it along the window (the mean of the cell and its adjacent windows at the same definition, discount and limit), keep the cells with at
-least `TUNE_N_MIN` entries, take the highest; a tie goes to the smaller window. "E tuned" is the record those choices make, every day scored by a cell chosen
-without it, read beside E as built and rule A on the same days.
+Each week from the second is traded with the setting chosen on every week before it. E tuned is the record those weeks make, beside E as built and rule A on the
+same days (gate G3).
 ''')
 
 code(r'''
@@ -437,31 +394,22 @@ _rows = [dict(traded_week=WK(f_), chosen_on=ST.week_name(DAYS, f_["choose_idx"])
               ex5=r_["score"], smoothed=r_["smoothed"], qualifies=r_["eligible"]) for f_ in WF["folds"] for j_, r_ in enumerate(f_["rank"])]
 display(Markdown("**Each traded week's pick and its three runners-up**, scored on the choosing weeks only (rank 1 is the pick)"))
 display(HTML(pd.DataFrame(_rows).round(3).to_html(index=False, border=0)))
-OLD_WF = {k_: ST.old_book(TAB, e_) for k_, e_ in (("tuned", ENT), ("E", REC_E))}
-_notes = [f"Answer: over the {len(OOS_DAYS)} traded days E tuned nets {sgn(TS['per_ex_top5'])} an entry without the best 5% against {sgn(TS_E['per_ex_top5'])} for E as built: "
+_notes = [f"Over the {len(OOS_DAYS)} traded days E tuned nets {sgn(TS['per_ex_top5'])} an entry without the best 5% against {sgn(TS_E['per_ex_top5'])} for E as built: "
           + ("tuning beat the rule as built out of sample (G3 PASS)." if G_WALK else "tuning did not beat the rule as built out of sample, so it added nothing (G3 FAIL)."),
           f"E tuned: {TS['n']:,} entries over {len(OOS_DAYS)} days, {sgn(TS['per'], 3)} USD an entry (95% by slot {sgn(TS['per_lo'])} to {sgn(TS['per_hi'])}), {sgn(TS['net'], 0)} USD; "
           f"without the best 5% {sgn(TS['per_ex_top5'], 3)} (95% {sgn(TS['per_ex_top5_lo'])} to {sgn(TS['per_ex_top5_hi'])}).",
           f"E as built on the same days: {TS_E['n']:,} entries, {sgn(TS_E['per'], 3)} an entry ({sgn(TS_E['per_lo'])} to {sgn(TS_E['per_hi'])}), {sgn(TS_E['net'], 0)} USD; without the best 5% "
           f"{sgn(TS_E['per_ex_top5'], 3)} ({sgn(TS_E['per_ex_top5_lo'])} to {sgn(TS_E['per_ex_top5_hi'])}). Rule A {sgn(TS_A['per'], 3)} on {TS_A['n']:,}.",
-          "G3 asks for E tuned's net without the best 5% above E as built's AND the low end of its 95% interval above zero.",
           f"Before the taker fee E tuned made {sgn(float(ENT['gross'].sum()), 0)} USD; the fee took {float(ENT['fee'].sum()):,.0f}.",
-          f"Frozen feeds (a book row 2 s old or more at the decision; timing audit finding 3, not masked in this engine): {OLD_WF['tuned'][0]} of E tuned's entries ({sgn(OLD_WF['tuned'][2], 0)} USD) "
-          f"and {OLD_WF['E'][0]} of E as built's ({sgn(OLD_WF['E'][2], 0)} USD) on these days"
-          + (f"; on a slot-wide silent feed (every book of the slot 2 s old or more, what `tf15_cands.feed_live` would refuse) {silent(ENT)[0]} of E tuned's ({sgn(silent(ENT)[1], 0)} USD) and {silent(REC_E)[0]} of E as built's."
-             if FEED_LIVE is not None else "."),
-          "E as built was read on these days by um-021, where it was found; only E tuned's record is out of sample for a choice."]
+          "E as built was read on these days before; only E tuned's record is out of sample for a choice."]
 figstyle.show(ST.walk_fig({"tuned": ("E tuned", ENT), "E": ("E as built", REC_E), "A": ("rule A", REC_A)}, WF, DAYS, _notes, WIN_WF, G_WALK), "fig:s3-walk", FIGURES)
 ''', "fig:s3-walk")
 
 md(r'''
-### S3.4 · Is the choice stable?
+### S3.4 · Is the setting we picked the same from week to week, and does the week we traded agree with the weeks we picked from?
 
-**In one line:** for each traded week, did the weeks before it pick the same stale window as the other weeks did (question 1, gate G4), and did the week
-itself then earn what the choosing weeks promised (question 2, gate G15)?
-
-Each panel is one traded week: along the stale window, for the pick's definition, discount and limit, the score on the choosing weeks (raw, and smoothed as
-the rule reads it) and what the traded week then realised at every window.
+Each panel is one traded week, along the stale window: the score on its choosing weeks (raw, and smoothed as the rule reads it) and what the traded week then
+earned (gates G4 and G15).
 ''')
 
 code(r'''
@@ -471,24 +419,21 @@ G_STABLE = N_MODE_COUNT >= STABLE_MIN
 N_AGREE = sum(f_["agree"] for f_ in WF["folds"])
 G_AGREE = N_AGREE >= STABLE_MIN
 _here = [next(c_ for c_ in f_["curve"] if c_["n"] == f_["chosen"]["cfg"]["n"])["week"] for f_ in WF["folds"]]
-_notes = ["Answer 1: the picks chose the stale window " + ", ".join(f"{f_['chosen']['cfg']['n']} s" for f_ in WF["folds"]) + f" for the {len(WF['folds'])} traded weeks; "
+_notes = ["The picks chose the stale window " + ", ".join(f"{f_['chosen']['cfg']['n']} s" for f_ in WF["folds"]) + f" for the {len(WF['folds'])} traded weeks; "
           + (f"{N_MODE} s {N_MODE_COUNT} times" if N_MODE_COUNT > 1 else "no window twice") + f", so G4 {'PASSES' if G_STABLE else 'FAILS'} (at least {STABLE_MIN} of {len(NS_CHOSEN)} the same).",
-          f"Answer 2: {N_AGREE} of {len(WF['folds'])} traded weeks agree with their choosing weeks (above zero without the best 5% and inside the in-sample interval), so G15 "
+          f"{N_AGREE} of {len(WF['folds'])} traded weeks agree with their choosing weeks (above zero without the best 5% and inside the in-sample interval), so G15 "
           + f"{'PASSES' if G_AGREE else 'FAILS'}: " + "; ".join(f"{WK(f_)} {sgn(f_['s'].get('per_ex_top5'))} against {sgn(f_['s_in'].get('per_ex_top5'))} in-sample, {'agrees' if f_['agree'] else 'collapses'}" for f_ in WF["folds"]) + ".",
           "The picked definition, discount to fair value and limit by traded week: " + "; ".join(f"{WK(f_)} ({f_['chosen']['cfg']['kind']}) {f_['chosen']['cfg']['theta'] * 100:.0f} c {f_['chosen']['cfg']['limit']}" for f_ in WF["folds"]) + ".",
           "Entries behind each traded week's number: " + "; ".join(f"{WK(f_)} {h_.get('n', 0):,}" for f_, h_ in zip(WF["folds"], _here)) + ".",
-          "A pick with too few entries on its choosing weeks is marked thin in S3.3's table; neighbouring windows share most of their entries, so a smooth line is expected and a jump is not."]
+          "Neighbouring windows share most of their entries, so a smooth line is expected and a jump is not."]
 figstyle.show(ST.stable_fig(WF, DAYS, _notes, WIN_WF), "fig:s3-stable", FIGURES)
 ''', "fig:s3-stable")
 
 md(r'''
-### S3.5 · The final cell
+### S3.5 · Does the final setting survive a late order and a higher fee?
 
-**In one line:** the setting the same rule picks from all 38 days (what a forward read would freeze), judged by the walk-forward record, not by its own days.
-
-The plateau rule applied to every seated day picks the cell a forward read would freeze. Its numbers on those days are in-sample (it was chosen on them); its
-honest read is the walk-forward record of S3.3, the same rule run without sight of each week. Beside it: the latency ladder (tables seated at other delays and
-whole seconds added to the 250 ms table) and the fee sweep, against E as built; S4.2 and S4.3 draw both in full.
+The same rule on every seated day picks the setting a forward read would freeze. Its numbers on those days are in-sample; its honest read is the walk-forward row.
+Delay and fee are read against E as built (S4.2 and S4.3 draw both in full).
 ''')
 
 code(r'''
@@ -504,11 +449,11 @@ SH, DSR = ST.deflated_record(TUNE, ENT)
 LAT_TABS = {LAT_MS: TAB}
 LAT_MISSING = {}
 for ms_ in (150, 500, 1000):
-    miss_ = [d_ for d_ in DAYS if RUNNER.seated(d_, ms_) is None]
+    miss_ = [d_ for d_ in DAYS if RUNNER.seated(d_, ms_, DECIDE_MS, REF) is None]
     if miss_:
         LAT_MISSING[ms_] = miss_
         continue
-    LAT_TABS[ms_] = B.Tab(DAYS, fill_ms=ms_)
+    LAT_TABS[ms_] = B.Tab(DAYS, fill_ms=ms_, decide_ms=DECIDE_MS, ref=REF)
 LAT = {"E": ("E: test E as built", ST.latency_rows(CAND, LAT_TABS, CFG_E, LAT_MS, EXTRA_S)), "cell": (f"final: {CFG['name']}", ST.latency_rows(CAND, LAT_TABS, CFG, LAT_MS, EXTRA_S))}
 DELAY_E = {"E": ST.delay_entries(CAND, LAT_TABS, CFG_E, LAT_MS, EXTRA_S), "cell": ST.delay_entries(CAND, LAT_TABS, CFG, LAT_MS, EXTRA_S)}     # S4.2's paths
 LAT_SEATED = sorted(LAT_TABS)
@@ -525,14 +470,15 @@ FINAL_ROWS = [_line("Final cell, every seated day (chosen on them)", len(DAYS), 
               _line("E tuned at 1,250 ms", len(OOS_DAYS), WF_1S), _line("E tuned at twice the fee", len(OOS_DAYS), WF_FEE2)]
 _rp = REPRICE["E"]
 _n_rest = _rp["same"][0] + _rp["lower"][0]
-_notes = [f"Answer: the final setting's honest read is E tuned's walk-forward record, {sgn(TS['per'])} an entry on {TS['n']:,} ({sgn(TS['per_ex_top5'])} without the best 5%), "
-          f"not its own {len(DAYS)}-day {sgn(S_CELL['per'])}, which it was chosen on.",
-          ("The plateau centre on every seated day is E as built: the tuning confirms the brief's 3 s, definition (a), a 5 c discount to fair value and the ask-seen limit."
+_ok_late = bool(WF_1S.get("n") and WF_1S["per"] > 0 and WF_FEE2.get("n") and WF_FEE2["per"] > 0)
+_notes = [f"{'Yes' if _ok_late else 'No'}. The tuned record nets {sgn(TS['per'])} USD an entry on {TS['n']:,} entries ({sgn(TS['per_ex_top5'])} without the best 5%); with the order a second later "
+          f"{sgn(WF_1S['per'])}, at twice the fee {sgn(WF_FEE2['per'])}. These walk-forward numbers are the honest read, not the {len(DAYS)}-day {sgn(S_CELL['per'])} the final setting was chosen on.",
+          ("The plateau centre on every seated day is E as built: the tuning confirms 3 s, definition (a), a 5 c discount to fair value and the ask-seen limit."
            if FINAL_IS_E else f"The plateau centre on every seated day is {CFG['name']} ({C.STALE_DEFS[CFG['kind']].split('(')[0].strip()}; {CFG['n']} s; a {CFG['theta'] * 100:.0f} c discount to fair value; limit at {ST.LIMIT_NAME[CFG['limit']]}), not E as built ({CFG_E['name']}).")
-          + f" Its own {len(DAYS)}-day numbers are in-sample; the walk-forward row is its honest read.",
+          + f" Its own {len(DAYS)}-day numbers are in-sample.",
           f"Of E's {S_E['n']:,} entries, {_rp['higher'][0]:,} ({_rp['higher'][0] / max(S_E['n'], 1):.0%}) sit on books whose near ask 5 s later is above the ask seen: they earn {sgn(_rp['higher'][1])} an entry, "
-          f"a re-pricing edge that a later order with its limit at the ask seen loses within seconds. The other {_n_rest:,} earn {sgn((_rp['same'][2] + _rp['lower'][2]) / max(_n_rest, 1))} on books that did not re-price (timing audit, finding 1).",
-          "; ".join(f"{t_.split(':')[0]}: {sgn(rr_[0]['total'], 0)} USD at {rr_[0]['ms']:,} ms, {sgn(next(r_['total'] for r_ in rr_ if r_['ms'] == LAT_MS), 0)} at {LAT_MS} ms, {sgn(rr_[-1]['total'], 0)} at {rr_[-1]['ms']:,} ms" for t_, rr_ in LAT.values())
+          f"and a later order with its limit at the ask seen loses them first. The other {_n_rest:,} earn {sgn((_rp['same'][2] + _rp['lower'][2]) / max(_n_rest, 1))} on books that did not re-price.",
+          "; ".join(f"{t_.split(':')[0]}: " + ", ".join(f"{sgn(r_['total'], 0)} USD at {r_['ms']:,} ms" for r_ in ([rr_[0]] if rr_[0]['ms'] != LAT_MS else []) + [next(r_ for r_ in rr_ if r_['ms'] == LAT_MS), rr_[-1]]) for t_, rr_ in LAT.values())
           + ": a later order keeps fewer entries and loses the best ones, so the dollars fall faster than the net an entry.",
           "; ".join(f"{t_.split(':')[0]} breaks even at {c_['be_mult']:.2f}x the fee" for t_, c_ in COSTS.values()) + "."]
 figstyle.show(ST.final_fig({k_: LAT[k_] for k_ in ("E", "cell")}, COSTS, FINAL_ROWS, ["Read", "Days", "Entries", "Win", "Net an entry (95%)", "Ex-5% (95%)", "Net USD"], _notes, WIN, LAT_MS),
@@ -557,10 +503,9 @@ else:
 ''')
 
 md(r'''
-### S3.6 · The rules over time
+### S3.6 · Did the tuned rule grow the account faster than the plain rule?
 
-**In one line:** the account after the fee, day by day: E tuned from 09-09 (each week traded with the setting chosen before it), the final setting, E as built
-and rule A on every day. E tuned starts later, so its total is compared with E as built's on the same 31 days in the bullets, not with the line ends.
+E tuned starts at the second week, so its total is compared with E as built's on the same days in the bullets, not at the line ends.
 ''')
 
 code(r'''
@@ -568,7 +513,7 @@ _tot = lambda e_: float(np.sum(e_["net"]))
 _lines = [("E tuned, walk-forward from " + OOS_DAYS[0][5:], "E tuned", ENT, figstyle.IDENTITY["POLYMARKET"], 2.4, int(OOS_IDX[0])),
           (f"final setting {CFG['name']}, every day", "final", CELL_ALL, ST.INK2, 2.0, 0), ("E as built, every day", "E as built", E_ALL, ST.MUTED, 1.5, 0),
           ("rule A, every day", "rule A", A_ALL, N_AXIS, 1.3, 0)]
-_notes = [f"Answer: on the {len(OOS_DAYS)} traded days E tuned made {sgn(TS['net'], 0)} USD on {TS['n']:,} entries against {sgn(TS_E['net'], 0)} for E as built on {TS_E['n']:,}; without the best 5% "
+_notes = [f"On the {len(OOS_DAYS)} traded days E tuned made {sgn(TS['net'], 0)} USD on {TS['n']:,} entries against {sgn(TS_E['net'], 0)} for E as built on {TS_E['n']:,}; without the best 5% "
           f"{sgn(TS['per_ex_top5'])} against {sgn(TS_E['per_ex_top5'])} an entry, so tuning " + ("beat" if G_WALK else "did not beat") + " the rule as built out of sample (G3).",
           f"Every day ({len(DAYS)}): the final setting {sgn(_tot(CELL_ALL), 0)} USD on {S_CELL['n']:,} entries (in-sample: it was chosen on these days), E as built {sgn(_tot(E_ALL), 0)} on {S_E['n']:,}, "
           f"rule A {sgn(_tot(A_ALL), 0)} on {S_A['n']:,}.",
@@ -578,36 +523,35 @@ figstyle.show(ST.rules_paths_fig(_lines, DAYS, WF["weeks"], WIN, _notes), "fig:s
 
 # ================================================================================================ S4
 md(r'''
-## S4 · Robustness
+## S4 · Robustness - Does the edge survive new days, luck, delay and fees?
 
-On the final cell and on test E side by side. The final cell was chosen on every seated day, so its blocks and folds below are consistency checks; the
-walk-forward record of S3.3 is its clean read.
+On the final cell and on test E side by side. The final cell was chosen on every seated day, so its blocks and weeks here are consistency checks; S3.3 is its clean
+read.
 
-### S4.1 · Out of sample and luck
+### S4.1 · Does the rule beat luck, and does it keep making money on days it was not read on?
 
-The luck test is the random-burst null (`tf15_oos.random_burst`, the accounting audit's fix of 2026-10-11): the same count of entries per day and coin at
-seconds that pass every condition of the cell except the burst (the discount to fair value, the band, the stale condition), bought at the ask seen. It asks whether the
-burst's direction adds anything to a book that already passes the gate. The coin-flip side is printed as a reading only: it buys the far token, which sits
-above its own fair value wherever the near one passes the gate, so it measures the price gate and cannot fail (the audit's finding 2).
+The luck test buys the same number of entries per day and coin at random seconds that pass every condition of the cell except the burst, at the ask seen: does the
+burst's direction add anything to a book that already passes the gate? The coin-flip side is a reading only: it buys the far token, so it measures the price gate and
+cannot fail.
 ''')
 
-for lab, ent, ttl in (("e", "E_ALL", "test E"), ("cell", "CELL_ALL", "the final cell")):
+for lab, ent, ttl in (("e", "E_ALL", "test E"), ("cell", "CELL_ALL", "the final setting")):
     code(f'''
 WIN_ = f"{{DAYS[0][5:]}} to {{DAYS[-1][5:]}} · {{24 * len(DAYS):,}}h · {{len(DAYS)}} days · one regime · verify {{VERIFY_PASSED}}/{{VERIFY_TOTAL}}"
 _r = O.read_blocks({ent}, DAYS, N_IS, N_OOS)
 OOS2W_{lab.upper()} = _r
-figstyle.show(OF.oos2w_fig({ent}, DAYS, _r, OF.block_notes(_r, O.MIN_N), "Does {ttl} hold on days it was not read on, two weeks against two weeks?", WIN_), "fig:s4-{lab}-oos2w", FIGURES)
+figstyle.show(OF.oos2w_fig({ent}, DAYS, _r, OF.block_notes(_r, O.MIN_N), "Does {ttl} keep making money in the weeks after the first two?", WIN_), "fig:s4-{lab}-oos2w", FIGURES)
 ''', f"fig:s4-{lab}-oos2w")
     code(f'''
 _f = O.read_folds({ent}, DAYS, WEEK)
 FOLDS_{lab.upper()} = _f
-figstyle.show(OF.folds_fig({ent}, DAYS, _f, OF.fold_notes(_f, DAYS, WEEK, O.MIN_N), "Does {ttl} hold week after week, each week read against the one before?", WIN_), "fig:s4-{lab}-oosfolds", FIGURES)
+figstyle.show(OF.folds_fig({ent}, DAYS, _f, OF.fold_notes(_f, DAYS, WEEK, O.MIN_N), "Does {ttl} make money week after week?", WIN_), "fig:s4-{lab}-oosfolds", FIGURES)
 ''', f"fig:s4-{lab}-oosfolds")
     cfg = "CFG_E" if lab == "e" else "CFG"
     name = '"E"' if lab == "e" else 'CFG["name"]'
     code(f'''
 _s = ST.stats5({ent})
-_g, _tm, _m = CAND.gates(TAB, {cfg}), C.tmask(TAB, {cfg}["t_min"]), ST.burst_masks(TAB, {cfg})
+_g, _tm, _m = CAND.gates(TAB, {cfg}), C.tmask(TAB, {cfg}["t_min"]), ST.burst_masks(TAB, {cfg}, feed=CAND.feed)
 _rs = O.random_side(TAB, _g, _tm, usd=CLIP_USD, draws=N_DRAWS, seed=31)
 _rb = O.random_burst(TAB, {ent}, _m, "A", t_min={cfg}["t_min"], usd=CLIP_USD, draws=N_DRAWS, seed=37)
 _ok_s, _n_s = O.side_agrees(TAB, _g, _tm, usd=CLIP_USD)
@@ -621,13 +565,13 @@ if {cfg}["limit"] != "ask":
     _notes.append("This cell's limit is our edge price; the null buys at the ask seen, so it fills a little less than the cell would.")
 _nulls = [dict(name="random burst", null=_rb["per"], observed=_s["per"], p=_p["burst"]),
           dict(name="coin-flip side (buys the far token:\\nmeasures the price gate, not the burst)", null=_rs["per"], observed=_s["per"], p=_p["side"])]
-figstyle.show(OF.random_fig(_nulls, _rows, _notes, "Does {ttl} beat the same count of entries at seconds that pass everything but the burst?", WIN_, colw=OF.BURST_COLW), "fig:s4-{lab}-random", FIGURES)
+figstyle.show(OF.random_fig(_nulls, _rows, _notes, "Does {ttl} beat buying at random moments without a burst?", WIN_, colw=OF.BURST_COLW), "fig:s4-{lab}-random", FIGURES)
 ''', f"fig:s4-{lab}-random")
 
 code(r'''
 # ---- E tuned's walk-forward record against the random-burst null, each fold on its own week with its own cell (gate G7) ----
 _t = time.time()
-REC_BURST = ST.record_burst(TAB, WF, draws=N_DRAWS, seed=41, usd=CLIP_USD)
+REC_BURST = ST.record_burst(TAB, WF, draws=N_DRAWS, seed=41, usd=CLIP_USD, feed=CAND.feed)
 P_REC_BURST = O.p_one_sided(REC_BURST["per"], TS["per"]) if TS.get("n") else float("nan")
 display(Markdown(f"**E tuned's walk-forward record against the random-burst null** ({N_DRAWS:,} draws; each fold's count of entries per day and coin at its week's seconds that pass "
                  f"every condition of its cell but the burst; {time.time() - _t:.0f}s): the null's median {sgn(float(np.nanmedian(REC_BURST['per'])), 3)} an entry, its 90th percentile "
@@ -635,29 +579,27 @@ display(Markdown(f"**E tuned's walk-forward record against the random-burst null
 ''')
 
 md(r'''
-**Each week without its best 5%.** A rule that earns only because of a few lucky wins is not an edge: take out the best 5% of a week's entries (set them to
-zero) and the rest must still make money. Each panel cumulates every week's PnL from zero, all entries and without the week's best 5%; a week passes when the
-second line ends above zero. The final setting on top, E as built below, on the same six weeks.
+**Do we still make money each week if we drop the few best trades?** Take the best 5% of a week's entries out (set them to zero): the rest must still make money.
+Each panel cumulates a week's PnL from zero, all entries and without the best 5%; a week passes when the second line ends above zero.
 ''')
 
 code(r'''
 _r6 = {"cell": (f"final: {CFG['name']}", CELL_ALL), "E": ("E: test E as built", E_ALL)}
 _wk = ST.weeks_of(len(DAYS), WEEK)
 _np = {k_: sum(1 for i_ in _wk if ST.stats(ST.by_days(e_, i_)).get("n") and ST.stats(ST.by_days(e_, i_))["per_ex_top5"] > 0) for k_, (t_, e_) in _r6.items()}
-_notes = [f"Answer: without its best 5% the final setting earns in {_np['cell']} of {len(_wk)} weeks and E as built in {_np['E']} of {len(_wk)}.",
+_notes = [f"Without its best 5% the final setting earns in {_np['cell']} of {len(_wk)} weeks and E as built in {_np['E']} of {len(_wk)}.",
           f"Pooled over the {len(DAYS)} days without the best 5%: the final setting {sgn(S_CELL['per_ex_top5'])} an entry (95% by slot {sgn(S_CELL['per_ex_top5_lo'])} to {sgn(S_CELL['per_ex_top5_hi'])}, "
           f"in-sample), E as built {sgn(S_E['per_ex_top5'])} ({sgn(S_E['per_ex_top5_lo'])} to {sgn(S_E['per_ex_top5_hi'])}).",
-          "The weeks are cut by date, not on the results; the final setting was chosen on all of them, so its row is a consistency check and E as built's is the fixed rule's read."]
+          "The final setting was chosen on all of these weeks, so its row is a consistency check; E as built is a fixed rule."]
 figstyle.show(ST.weekly_ex5_fig(_r6, DAYS, WEEK, WIN, _notes), "fig:s4-weekly-ex5", FIGURES)
 ''', "fig:s4-weekly-ex5")
 
 md(r'''
-### S4.2 · Latency
+### S4.2 · What happens when the order arrives later?
 
-The net an entry, the total and the entries a later order loses, against the delay from the decision to the ladder the order meets: tables seated at 150,
-250, 500 and 1,000 ms where every day is seated at that delay, and whole seconds added to the 250 ms table (1,250 to 5,250 ms). The study's 250 ms is an
-assumption [U] until our own tick-to-trade is measured. The timing audit (2026-10-11, finding 1) showed the net an entry alone misleads here: with the limit at
-the ask seen a later order loses exactly the entries whose book re-priced, which were the best ones, so the per-entry net of the survivors can hold while the
+Net an entry, total and the entries a later order loses, against the delay between the decision and the ladder the order meets: tables seated at 150, 250, 500 and
+1,000 ms where every day is seated at that delay, and whole seconds added to the 250 ms table (1,250 to 5,250 ms). The 250 ms is an assumption [U]. With the limit
+at the ask seen, a later order loses exactly the entries whose book re-priced, which were the best ones, so the net an entry of the survivors can hold while the
 dollars fall.
 ''')
 
@@ -672,20 +614,26 @@ print(f"seated tables {LAT_SEATED}; not seated on every day: {({k_: len(v_) for 
 code(r'''
 _notes = []
 for lab_, (t_, rows_) in LAT.items():
+    now_, late_ = next(r_ for r_ in rows_ if r_["ms"] == LAT_MS), next((r_ for r_ in rows_ if r_["ms"] == LAT_MS + 1000), None)
+    if late_ is not None and lab_ in ("E", "cell"):
+        _notes.append(f"{t_.split(':')[0]}: a second late ({late_['ms']:,} ms instead of {LAT_MS}) the net an entry goes from {sgn(now_['s']['per'])} to {sgn(late_['s']['per'])} "
+                      f"and the total from {sgn(now_['total'], 0)} to {sgn(late_['total'], 0)} USD, on {late_['s']['n']:,} entries instead of {now_['s']['n']:,}.")
+for lab_, (t_, rows_) in LAT.items():
     cx_ = ST.crossing(rows_)
     _notes.append(f"{t_.split(':')[0]}: " + "; ".join(f"{r_['ms']:,} ms {sgn(r_['s']['per'])} on {r_['s']['n']:,} ({sgn(r_['total'], 0)} USD)" for r_ in rows_) + ". "
-                  + (f"The net an entry crosses zero near {cx_:,.0f} ms." if cx_ is not None else "The net an entry does not cross zero inside the delays read; the total falls."))
+                  + (f"The net an entry crosses zero near {cx_:,.0f} ms." if cx_ is not None else
+                     ("The net an entry is at or below zero from the study's delay on." if rows_[0]["s"]["per"] <= 0 else "The net an entry does not cross zero inside the delays read.")))
     sp_ = [r_ for r_ in rows_ if r_["kept_n"] and r_["ms"] != LAT_MS]
     if sp_:
         _notes.append(f"{t_.split(':')[0]}, the entries a later order loses earned at {LAT_MS} ms: " + "; ".join(f"+{(r_['ms'] - LAT_MS) // 1000} s {r_['lost_n']:,} lost at {sgn(r_['lost_per'])}, {r_['kept_n']:,} kept at {sgn(r_['kept_per'])}" for r_ in sp_) + ".")
 _rp = REPRICE["E"]
 _n_rest = _rp["same"][0] + _rp["lower"][0]
-_notes.append(f"Two parts: {_rp['higher'][0] / max(S_E['n'], 1):.0%} of E's entries sit on books that re-price within 5 s and earn {sgn(_rp['higher'][1])} an entry, an edge gone within seconds of latency; "
-              f"the other {_n_rest / max(S_E['n'], 1):.0%} earn {sgn((_rp['same'][2] + _rp['lower'][2]) / max(_n_rest, 1))} on books that never re-price, which no delay removes.")
+_notes.append(f"Two parts: {_rp['higher'][0] / max(S_E['n'], 1):.0%} of E's entries sit on books that re-price within 5 s and earn {sgn(_rp['higher'][1])} an entry, the part a later order loses first; "
+              f"the other {_n_rest / max(S_E['n'], 1):.0%} earn {sgn((_rp['same'][2] + _rp['lower'][2]) / max(_n_rest, 1))} on books that never re-price.")
 _notes.append(f"The walk-forward record at 1,250 ms: {sgn(WF_1S['per'], 3)} an entry on {WF_1S['n']:,} (at 250 ms {sgn(TS['per'], 3)}): gate G10 reads this.")
 _notes.append("The whole-second points reuse the 250 ms table and move every decision 1 to 5 s later (the engine's own fill path). "
               + (f"Tables at 500 and 1,000 ms were seated for all {len(DAYS)} days and are read directly; their entries are not matched to the 250 ms entries."
-                 if not LAT_MISSING else f"Not seated on every day: {', '.join(f'{k_} ms ({len(v_)} days)' for k_, v_ in LAT_MISSING.items())}; those delays are left out, not interpolated."))
+                 if not LAT_MISSING else f"Tables at {', '.join(f'{k_:,} ms' for k_ in sorted(LAT_MISSING))} are not seated with the gate at {DECIDE_MS} ms (missing on {', '.join(str(len(v_)) for _, v_ in sorted(LAT_MISSING.items()))} days); those delays are left out, not interpolated."))
 figstyle.show(ST.latency_fig(LAT, WIN, _notes, LAT_MS), "fig:s4-latency", FIGURES)
 ''', "fig:s4-latency")
 
@@ -700,23 +648,26 @@ for k_ in ("cell", "E"):
     _notes.append(f"{LAT[k_][0].split(':')[0]}: " + "; ".join(f"{ms_:,} ms {sgn(v_, 0)} USD" for ms_, v_, b_ in pts_ if ms_ in _show) + ". "
                   + (f"The total first falls to half its {LAT_MS} ms value at {h_:,} ms." if h_ else f"The total does not fall to half its {LAT_MS} ms value inside {max(DELAY_E[k_]):,} ms."))
 _sp = [r_ for r_ in LAT["E"][1] if r_["kept_n"] and r_["ms"] != LAT_MS]
-_notes.append("The survivor effect (timing audit, finding 1): a later order with its limit at the ask seen meets a book that has moved, so it is not the same fill, and the "
+_notes.append("A later order with its limit at the ask seen meets a book that has moved, so it is not the same fill, and the "
               "entries it loses are the best ones; for E " + "; ".join(f"+{(r_['ms'] - LAT_MS) // 1000} s loses {r_['lost_n']:,} entries that earned {sgn(r_['lost_per'])} each at {LAT_MS} ms" for r_ in _sp) + ".")
-_notes.append(f"The 150, 500 and 1,000 ms lines are tables seated at those delays; the 2,250 and 5,250 ms lines reuse the {LAT_MS} ms table with every decision moved 2 and 5 s later.")
-figstyle.show(ST.paths_fig(_pan, DAYS, WIN, _notes, "How does the account build at each delay, for the final cell and for E as built?"), "fig:s4-delay-paths", FIGURES)
+_notes.append(f"Lines other than {LAT_MS} ms reuse the {LAT_MS} ms table with every decision moved whole seconds later"
+              + (f"; tables at {', '.join(f'{m_:,}' for m_ in sorted(LAT_MISSING))} ms with the gate at {DECIDE_MS} ms are not seated, so those delays are left out." if LAT_MISSING else "; the other lines are tables seated at their delays."))
+figstyle.show(ST.paths_fig(_pan, DAYS, WIN, _notes, "How does the account grow if the order arrives later?"), "fig:s4-delay-paths", FIGURES)
 ''', "fig:s4-delay-paths")
 
 md(r'''
-### S4.3 · Fees and slippage
+### S4.3 · How much do we keep after the taker fee?
 
-Every net is after the taker fee (`rate x p x (1 - p)` a share, each market's own rate). Here the fee is shown, swept from none to three times the rate on the
-same entries, and the limit is raised one and two cents over the cell's own limit.
+Every net is after the taker fee (`rate x p x (1 - p)` a share, each market's own rate). The sweep runs the fee from none to three times its rate on the same
+entries, and raises the limit one and two cents over the cell's own.
 ''')
 
 code(r'''
 _c = COSTS["E"][1]
 _rate = _c["rates"]
-_notes = [f"The fee: shares x rate x p x (1 - p) (venue fact `fee.formula` [1]); the rate the engine charged on these entries: {', '.join(f'{r_:g}' for r_ in _rate)} (each market's `feeSchedule.rate` [API]; the crypto category's published rate is 0.07, `fee.category_rates` [1]). "
+_notes = ["; ".join(f"{t_.split(':')[0]} keeps a positive net up to {c_['be_mult']:.2f}x today's fee" + (f" (a rate of {c_['be_mult'] * c_['rates'][0]:.3f})" if len(c_["rates"]) == 1 else "") for t_, c_ in COSTS.values())
+          + ", so the fee can rise by that factor before the edge is gone.",
+          f"The fee: shares x rate x p x (1 - p) (venue fact `fee.formula` [1]); the rate the engine charged on these entries: {', '.join(f'{r_:g}' for r_ in _rate)} (each market's `feeSchedule.rate` [API]; the crypto category's published rate is 0.07, `fee.category_rates` [1]). "
           + (f"At that rate a share costs {_rate[0] * 0.25 * 100:.2f} c at p = 0.50 and {_rate[0] * 0.85 * 0.15 * 100:.2f} c at p = 0.85." if len(_rate) == 1 else "")]
 for lab_, (t_, c_) in COSTS.items():
     _notes.append(f"{t_.split(':')[0]}: gross {sgn(c_['gross'], 3)} an entry (95% {sgn(c_['gross_lo'])} to {sgn(c_['gross_hi'])}), fee {c_['fee_per']:.3f} ({c_['fee_per'] / c_['shares'] * 100:.2f} c a share, "
@@ -738,11 +689,11 @@ for k_ in ("cell", "E"):
                   + f". The total crosses zero at {c_['be_mult']:.2f}x the fee (a rate of {c_['be_mult'] * _r0:.3f})"
                   + (f"; at today's rate the fee takes {c_['fee_per'] / c_['gross']:.0%} of the gross." if c_["gross"] > 0 else "; the gross is not positive."))
 _notes.append(f"Every line holds the same entries and only the fee changes: shares x rate x p x (1 - p), at each multiple of each market's own rate ({_r0:g} on the crypto category, `fee.category_rates` [1]); 1x is today's rate.")
-figstyle.show(ST.paths_fig(_pan, DAYS, WIN, _notes, "How does the account build at each fee rate, for the final cell and for E as built?"), "fig:s4-fee-paths", FIGURES)
+figstyle.show(ST.paths_fig(_pan, DAYS, WIN, _notes, "How does the account grow at each taker fee rate?"), "fig:s4-fee-paths", FIGURES)
 ''', "fig:s4-fee-paths")
 
 md(r'''
-### S4.4 · Slices
+### S4.4 · Does the edge hold in every group of trades?
 ''')
 
 code(r'''
@@ -759,7 +710,7 @@ figstyle.show(ST.slices_fig(SL, _ov, WIN, _notes), "fig:s4-slices", FIGURES)
 ''', "fig:s4-slices")
 
 md(r'''
-### S4.5 · Steadiness over weeks
+### S4.5 · Does the account climb steadily or in jumps?
 ''')
 
 code(r'''
@@ -776,9 +727,9 @@ figstyle.show(ST.steady_fig(STEADY, DAYS, R2_MIN, WIN, _notes), "fig:s4-steady",
 ''', "fig:s4-steady")
 
 md(r'''
-### S4.6 · Exits
+### S4.6 · Does selling early beat holding to expiry?
 
-One figure, no exit search: holding to expiry against a sale at the near bid after 60, 120 and 300 seconds and a take-profit at 0.95, on the same entries.
+Holding to expiry against a sale at the near bid after 60, 120 and 300 seconds and a take-profit at 0.95, on the same entries.
 ''')
 
 code(r'''
@@ -794,12 +745,106 @@ _notes.append("A sale walks the near bid ladder of its second and pays the fee a
 figstyle.show(ST.exits_fig(EXITS, WIN, _notes), "fig:s4-exits", FIGURES)
 ''', "fig:s4-exits")
 
+md(r'''
+### S4.7 · Does paying at most 50 cents a share help?
+
+A binary bought at p wins 1 - p and loses p, so at 0.50 or under every trade risks no more than it can win; the cap removes the entries that lose a whole dollar
+to win half of one. It applies to the ask seen at the decision second (the order's limit) and is confirmed on the fill; 0.60 is read as a softer cut. Both rules
+use the engine's fair value. The capped rule is then read week by week, in two-week blocks, and against the random-burst null with the cap applied to the draws.
+''')
+
+code(r'''
+_t = time.time()
+E4 = {}
+for k_, lab_, cap_ in (("E", "E as built", None), ("cap50", "E paying at most 0.50", 0.50), ("cap60", "E paying at most 0.60", 0.60)):
+    e_, g_, m_ = ST.e_variant(TAB, CFG_E, cap=cap_, feed=CAND.feed)
+    E4[k_] = dict(label=lab_, e=e_, gates=g_, masks=m_, cap=cap_)
+assert _same(E4["E"]["e"], E_ALL), "E rebuilt through e_variant is not E"
+_hf = lambda e_, h_: ST.stats(B.subset(e_, (np.asarray(e_["day"]) < HALF) if h_ == 0 else (np.asarray(e_["day"]) >= HALF)))
+_wk6 = ST.weeks_of(len(DAYS), WEEK)
+_rows = []
+for k_, r_ in E4.items():
+    e_ = r_["e"]
+    s_ = ST.stats5(e_)
+    r_["s"] = s_
+    _d = ST.daily(e_, len(DAYS))
+    _nd = ST.daily(dict(day=e_["day"], net=np.ones(len(e_["net"]))), len(DAYS))
+    r_["weeks_pass"] = sum(1 for i_ in _wk6 if ST.stats(ST.by_days(e_, i_)).get("n") and ST.stats(ST.by_days(e_, i_))["per_ex_top5"] > 0)
+    _rows.append(dict(rule=r_["label"], entries=s_.get("n", 0), win_pct=s_.get("win", np.nan) * 100, win_needed_pct=s_.get("win_needed", np.nan) * 100,
+                      net_per_entry=f"{sgn(s_.get('per'))} ({sgn(s_.get('per_lo'))} to {sgn(s_.get('per_hi'))})",
+                      without_best5=f"{sgn(s_.get('per_ex_top5'))} ({sgn(s_.get('per_ex_top5_lo'))} to {sgn(s_.get('per_ex_top5_hi'))})",
+                      days_up=f"{int((_d > 0).sum())} of {int((_nd > 0).sum())}", first_half=sgn(_hf(e_, 0).get("per")), second_half=sgn(_hf(e_, 1).get("per")),
+                      weeks_pass=f"{r_['weeks_pass']} of {len(_wk6)}", **{a_: sgn(ST.stats(B.subset(e_, np.asarray(e_["asset"]) == i_)).get("per")) for i_, a_ in enumerate(ASSET)},
+                      highest_fill=float(np.max(e_["vwap"])) if len(e_["net"]) else np.nan))
+E4_DF = pd.DataFrame(_rows)
+display(Markdown(f"**E and the price cap on every seated day** (net an entry and the net without the best 5% with their 95% slot intervals; days up of the days with an entry; "
+                 f"halves split at {DAYS[HALF][5:]}; the coins' net an entry; the highest price any fill paid; {time.time() - _t:.0f}s)"))
+display(HTML(E4_DF.round(2).to_html(index=False, border=0)))
+''')
+
+code(r'''
+_c4 = {"E": figstyle.IDENTITY["MODEL"], "cap50": ST.INK2, "cap60": ST.MUTED}
+_lines = [(E4[k_]["label"], {"E": "E", "cap50": "<= 0.50", "cap60": "<= 0.60"}[k_], E4[k_]["e"], _c4[k_]) for k_ in ("E", "cap50", "cap60")]
+_s = {k_: E4[k_]["s"] for k_ in E4}
+_turn = [k_ for k_ in ("cap50", "cap60") if _s[k_].get("per_ex_top5_lo", -1) > 0]
+_notes = [("Yes: " + "; ".join(f"{E4[k_]['label']} lifts the net without the best 5% to {sgn(_s[k_]['per_ex_top5'])} with its interval clear of zero" for k_ in _turn) + "."
+                       if _turn else "No. The price cap does not turn E's net without the best 5% into a number whose interval clears zero: "
+                       + "; ".join(f"{E4[k_]['label']} {sgn(_s[k_]['per_ex_top5'])} ({sgn(_s[k_]['per_ex_top5_lo'])} to {sgn(_s[k_]['per_ex_top5_hi'])})" for k_ in ("E", "cap50", "cap60")) + "."),
+          "Totals after the fee: " + "; ".join(f"{E4[k_]['label']} {sgn(_s[k_].get('net', 0.0), 0)} USD on {_s[k_].get('n', 0):,} entries, {sgn(_s[k_].get('per'))} an entry" for k_ in ("E", "cap50", "cap60")) + ".",
+          f"The highest fill under the 0.50 cap paid {E4_DF.set_index('rule').loc[E4['cap50']['label'], 'highest_fill']:.3f}: the cap on the ask seen holds on the fill, because the order's limit is that ask.",
+          "Weeks passing without the week's best 5%: " + "; ".join(f"{E4[k_]['label']} {E4[k_]['weeks_pass']} of {len(_wk6)}" for k_ in ("E", "cap50", "cap60")) + "."]
+figstyle.show(ST.gate_paths_fig(_lines, DAYS, WIN, _notes, question="Does paying at most 50 cents a share help?"), "fig:s4-gates-paths", FIGURES)
+''', "fig:s4-gates-paths")
+
+code(r'''
+_r = {k_: (f"{E4[k_]['label']}", E4[k_]["e"]) for k_ in ("cap50", "E")}
+_notes = [f"Without the week's best 5% {E4['cap50']['label']} earns in {E4['cap50']['weeks_pass']} of {len(_wk6)} weeks and E as built in {E4['E']['weeks_pass']} of {len(_wk6)}.",
+          "Both rules are fixed, so each week is a read of a fixed rule, not of a choice."]
+figstyle.show(ST.weekly_ex5_fig(_r, DAYS, WEEK, WIN, _notes, cols={"cap50": ST.INK2, "E": figstyle.IDENTITY["MODEL"]}), "fig:s4-gates-weekly", FIGURES)
+''', "fig:s4-gates-weekly")
+
+code(r'''
+_b = E4["cap50"]
+WIN_ = f"{DAYS[0][5:]} to {DAYS[-1][5:]} · {24 * len(DAYS):,}h · {len(DAYS)} days · one regime · verify {VERIFY_PASSED}/{VERIFY_TOTAL}"
+OOS2W_B4 = O.read_blocks(_b["e"], DAYS, N_IS, N_OOS)
+figstyle.show(OF.oos2w_fig(_b["e"], DAYS, OOS2W_B4, OF.block_notes(OOS2W_B4, O.MIN_N), "Does paying at most 50 cents keep making money after the first two weeks?", WIN_), "fig:s4-gates-oos2w", FIGURES)
+''', "fig:s4-gates-oos2w")
+
+code(r'''
+FOLDS_B4 = O.read_folds(_b["e"], DAYS, WEEK)
+figstyle.show(OF.folds_fig(_b["e"], DAYS, FOLDS_B4, OF.fold_notes(FOLDS_B4, DAYS, WEEK, O.MIN_N), "Does paying at most 50 cents make money week after week?", WIN_),
+              "fig:s4-gates-folds", FIGURES)
+''', "fig:s4-gates-folds")
+
+code(r'''
+# the random-burst null with the price cap in its pool, so the draws pass what the rule passes
+_s = ST.stats5(_b["e"])
+_tm = C.tmask(TAB, CFG_E["t_min"])
+_rs = O.random_side(TAB, _b["gates"], _tm, usd=CLIP_USD, draws=N_DRAWS, seed=53)
+_rb = O.random_burst(TAB, _b["e"], _b["masks"], "A", t_min=CFG_E["t_min"], usd=CLIP_USD, draws=N_DRAWS, seed=59)
+_ok_s, _n_s = O.side_agrees(TAB, _b["gates"], _tm, usd=CLIP_USD)
+_ag = O.burst_agrees(TAB, _b["e"], _b["masks"], "A", theta=CFG_E["theta"], t_min=CFG_E["t_min"], usd=CLIP_USD)
+assert _ok_s and _ag["agree"] and not _ag["faults"], f"a randomised null disagrees with B.entries or breaks its own rules: {_ag}"
+_p = dict(burst=O.p_one_sided(_rb["per"], _s["per"]), burst_ex5=O.p_one_sided(_rb["ex5"], _s["per_ex_top5"]), side=O.p_one_sided(_rs["per"], _s["per"]), side_ex5=O.p_one_sided(_rs["ex5"], _s["per_ex_top5"]))
+RAND_B4 = _p
+_rows, _notes = OF.burst_rows("E", _s, O.ask_of(TAB, _b["e"]), _rb, _rs, _p, N_DRAWS, P_GATE, CFG_E["t_min"], dict(burst=_ag, side=(_ok_s, _n_s)))
+_nulls = [dict(name="random burst", null=_rb["per"], observed=_s["per"], p=_p["burst"]),
+          dict(name="coin-flip side (buys the far token:\nmeasures the price gate, not the burst)", null=_rs["per"], observed=_s["per"], p=_p["side"])]
+figstyle.show(OF.random_fig(_nulls, _rows, _notes, "Does paying at most 50 cents beat buying at random moments without a burst?", WIN_, colw=OF.BURST_COLW),
+              "fig:s4-gates-random", FIGURES)
+_bs = _b["s"]
+GATES_E4 = [{"id": "G17", "section": "S4", "label": "Cap 0.50: ex-5% clears 0", "name": "Does E paying at most 0.50 a share earn without its best 5% of entries on every seated day, the 95% slot interval of that number above zero?",
+             "reading": f"{sgn(_bs['per_ex_top5'], 3)} ({sgn(_bs['per_ex_top5_lo'])} to {sgn(_bs['per_ex_top5_hi'])}) on {_bs['n']:,} entries", "verdict": "PASS" if _bs["per_ex_top5_lo"] > 0 else "FAIL",
+             "would_change": "an interval that reaches zero"},
+            {"id": "G18", "section": "S4", "label": "Cap 0.50: 4 of 6 weeks", "name": f"Does E paying at most 0.50 a share earn without each week's best 5% of entries in at least 4 of the {len(_wk6)} weeks?",
+             "reading": f"{_b['weeks_pass']} of {len(_wk6)} weeks", "verdict": "PASS" if _b["weeks_pass"] >= 4 else "FAIL", "would_change": "fewer than 4 weeks"}]
+display(Markdown("**Gates on E paying at most 0.50 a share, read beside the decision and not part of the final cell's sizing:** "
+                 + "; ".join(f"{g_['id']} {g_['label']}: {g_['reading']}, {g_['verdict']}" for g_ in GATES_E4) + f"; random-burst p {_p['burst']:.4f}."))
+''', "fig:s4-gates-random")
+
 # ================================================================================================ S5
 md(r'''
-## S5 · Risk and diagnostics
-
-The daily record of the chosen cell and of E on every seated day, the drawdown against the limit written before the grid ran, the concentration of the net,
-and the stop against the realised path.
+## S5 · Risk and diagnostics - How far can the account fall?
 ''')
 
 code(r'''
@@ -816,10 +861,11 @@ figstyle.show(ST.risk_fig(RISK, DAYS, STOP_DAY_USD, DD_LIMIT_USD, WIN, _notes), 
 
 # ================================================================================================ S6
 md(r'''
-## S6 · Decision
+## S6 · Decision - How big an order can we place?
 
-Capacity under both fill limits (`tf15_capacity`: the walk up the ladder to our edge price and the re-run at each clip; the ask-seen form re-run the same way),
-then the gates. A size prints only when every gate of S2 to S5 has passed (`SIZED`); otherwise the rungs print as information only.
+The clip curve reads FAK with the limit at the ask seen and, as a third model, FAK with the limit at our edge price (fair value less the discount); the sizing
+ladder reads 1% of a starting notional of 2,000 to 10,000 USD a trade under FAK and FOK at the ask seen. A size prints only when every gate of S2 to S5 passed
+(`SIZED`); otherwise the rungs are information only.
 ''')
 
 code(r'''
@@ -849,6 +895,26 @@ figstyle.show(ST.clip_fig(CURVES, WIN, _notes), "fig:s6-clip", FIGURES)
 ''', "fig:s6-clip")
 
 code(r'''
+# ---- the sizing ladder at 1% of the starting notional a trade, under the venue's FAK (the engine's model) and FOK ----
+_t = time.time()
+LADDER = {"E": ("E: test E as built", ST.ladder_rows(CAND, TAB, CFG_E, len(DAYS))), "cell": (f"final: {CFG['name']}", ST.ladder_rows(CAND, TAB, CFG, len(DAYS)))}
+_notes = []
+for k_ in ("E", "cell"):
+    t_, rr_ = LADDER[k_]
+    ok_ = [r_ for r_ in rr_ if r_["full"] >= 0.9]
+    big_ = max(ok_, key=lambda r_: r_["notional"]) if ok_ else None
+    at4_ = next((r_ for r_ in rr_ if r_["notional"] == 4000.0), None)
+    _notes.append(f"{t_.split(':')[0]}: at 1% risk the largest starting notional at which 90% of its first orders still fill in full is "
+                  + (f"{big_['notional']:,.0f} USD (clip {big_['clip']:g})" if big_ else "none of those read (not even 2,000 USD, clip 20)")
+                  + (f"; at 4,000 USD (40 a trade) {at4_['full']:.0%} fill in full and the net a day is {sgn(at4_['fak']['day'])} USD under FAK and {sgn(at4_['fok']['day'])} under FOK "
+                     f"({at4_['fak']['n']:,} and {at4_['fok']['n']:,} entries)." if at4_ else "."))
+_notes.append("Fill shares are read on each window's first order (its first trigger second, its limit, the ladder 250 ms later); the money re-runs the rule at each clip, a miss retrying at the next second. "
+              "FAK keeps what fills from 5 shares; FOK trades only when the whole clip fills at or under the limit. Four book levels are a floor on the depth, and our own order moving the book is not modelled.")
+_notes.append(f"Read in {time.time() - _t:.0f}s. The clip curve above (S6) is a third model, FAK with the limit raised to fair value less the discount, and is labelled so.")
+figstyle.show(ST.ladder_fig(LADDER, WIN, _notes), "fig:s6-ladder", FIGURES)
+''', "fig:s6-ladder")
+
+code(r'''
 # ---- the gates, as data, then the decision ----
 def gate(i, sec, label, name, reading, verdict, would):
     GATES.append({"id": i, "section": sec, "label": label, "name": name, "reading": reading, "verdict": verdict if isinstance(verdict, str) else ("PASS" if verdict else "FAIL"), "would_change": would})
@@ -859,7 +925,7 @@ gate("G3", "S3", "Tuned beats E OOS", f"Does tuning beat the rule as built out o
      "E as built ahead, or the interval reaching zero")
 gate("G4", "S3", f"Same window {STABLE_MIN} of {len(NS_CHOSEN)} weeks", f"Is the pick the same week after week? The {len(NS_CHOSEN)} weekly picks, each made only on the weeks before its traded week, "
      f"must choose the same stale window at least {STABLE_MIN} times",
-     f"chosen n {', '.join(str(n_) for n_ in NS_CHOSEN)} s; " + (f"{N_MODE} s in {N_MODE_COUNT} folds" if N_MODE_COUNT > 1 else "no window twice"), G_STABLE, "a choice that jumps")
+     f"chosen n {', '.join(str(n_) for n_ in NS_CHOSEN)} s; " + (f"{N_MODE} s in {N_MODE_COUNT} weeks" if N_MODE_COUNT > 1 else "no window twice"), G_STABLE, "a choice that jumps")
 gate("G5", "S3", "OOS net above zero", "E tuned's walk-forward net an entry is above zero", f"{sgn(TS['per'], 3)} USD an entry (95% {sgn(TS['per_lo'])} to {sgn(TS['per_hi'])}) on {TS['n']:,}",
      bool(TS.get("n")) and TS["per"] > 0, "a net at or below zero")
 gate("G6", "S3", "OOS ex-5% above zero", "E tuned's walk-forward net an entry stays above zero without its best 5% of entries", f"{sgn(TS['per_ex_top5'], 3)} USD an entry",
@@ -892,6 +958,7 @@ WORD = "1x" if SIZED else "NO SIZE"
 CLASS = "A" if SIZED else ("B" if TS.get("n", 0) and TS["per"] > 0 else "C")
 GATES.append({"id": "G16", "section": "S6", "label": "Sized only if passed", "name": "a size only when every gate G1 to G15 passed; else the rungs are information only",
               "reading": f"{'SIZED' if SIZED else 'NO SIZE'}: {', '.join(g_['label'] for g_ in GATES if g_['verdict'] != 'PASS') or 'none failed'}", "verdict": "PASS" if SIZED else "FAIL", "would_change": "any gate it reads"})
+GATES.extend(GATES_E4)                                     # the price cap on E (S4.7): read beside the decision, not part of the final cell's sizing
 _rungs = [(lab_, f_, r_) for (lab_, f_), (t_, rows_) in CURVES.items() if lab_ == "cell" for r_ in rows_]
 display(Markdown(f"**Decision: {'a USD ' + format(CLIP_USD, 'g') + ' clip, one entry a window, paper only' if SIZED else 'NO SIZE, information only'}.** "
                  + ("Every gate passed." if SIZED else f"Not passed: {', '.join(g_['label'] for g_ in GATES if g_['verdict'] != 'PASS' and g_['id'] in CORE)}.")
@@ -901,7 +968,7 @@ display(HTML(pd.DataFrame([dict(limit=f_, clip=r_["clip"], entries_a_day=r_["per
 
 # ================================================================================================ S7
 md(r'''
-## S7 · Verdict
+## S7 · Verdict - Does the thesis hold?
 ''')
 
 code(r'''
@@ -911,13 +978,13 @@ _why = [f"E tuned, each week chosen on the weeks before it, earned {sgn(TS['per'
         f"{sgn(TS['per_ex_top5'], 3)} without the best 5% ({sgn(TS['per_ex_top5_lo'])} to {sgn(TS['per_ex_top5_hi'])}); E as built on the same days {sgn(TS_E['per'], 3)}, {sgn(TS_E['per_ex_top5'], 3)} without the best 5%",
         f"the weekly picks chose the stale window {', '.join(str(n_) for n_ in NS_CHOSEN)} s and {N_AGREE} of {len(WF['folds'])} traded weeks agreed with their choosing weeks; the final cell {CFG['name']}" + (" is E as built" if FINAL_IS_E else "") + f"; deflated Sharpe {_dsr:.2f} over {N_REGISTERED} cells; random burst p {P_REC_BURST:.4f}",
         f"E tuned at 1,250 ms {sgn(WF_1S['per'], 3)}, at twice the fee {sgn(WF_FEE2['per'], 3)}; not passed: {', '.join(_failed) or 'none'}"]
-NEXT_BET = (f"the forward read of {CFG['name']} frozen as it stands, on the days from 10-10 as they seat, registered first, on the engine with the frozen-feed mask and the gate read at our own latency "
-            "(the timing audit), a generator stub ...-stale-book-forward.build.py not built here" + ("" if FINAL_IS_E else "; beside it test E as built"))
+NEXT_BET = (f"the forward read of {CFG['name']} frozen as it stands, on the days from 10-10 as they seat, registered first, on this engine (the gate at t + {DECIDE_MS} ms, the feed mask), "
+            "" + ("" if FINAL_IS_E else "beside it test E as built"))
 VERDICT_MD = (f"**The answer: {WORD_V}.** " + ("Every gate passed." if SIZED else ("Real in sign out of sample, not sizeable. " if CLASS == "B" else "No money out of sample. "))
               + "\n\n" + "\n".join(f"- {w_[0].upper() + w_[1:]}." for w_ in _why) + f"\n\n**Next bet.** {NEXT_BET[0].upper() + NEXT_BET[1:]}."
-              + f"\n\n**Engine caveats.** The gate reads the book at the Binance print, and {OLD_E[0]} of E's entries ({sgn(OLD_E[2], 0)} USD) sit on a book row 2 s old or more"
-              + (f", {SILENT_E[0]} of them ({sgn(SILENT_E[1], 0)} USD) with every book of the slot silent" if FEED_LIVE is not None else "")
-              + "; both stay in this run (timing audit, findings 2 and 3). The engine with the feed mask and the gate read 100 ms late had not landed in full when this ran: a re-run on it is due.")
+              + f"\n\n**The engine.** The fair value starts from the venue's published price to beat, with the Binance price stream converted by the previous day's basis; the gate reads the book {DECIDE_MS} ms after the Binance print [U] "
+              f"and the order meets the ladder {LAT_MS} ms after it; decisions on a slot-wide silent feed are refused (the feed mask, {float((~FEED_LIVE).mean()):.3%} of window-seconds). "
+              "Our own latency is assumed, not measured.")
 display(Markdown(VERDICT_MD))
 for g_ in GATES:
     assert g_["verdict"] in REPORT.GATE_VERDICTS, g_
@@ -966,12 +1033,12 @@ for k_, v_ in list(METRICS.items()):
     if v_ is None or (isinstance(v_, float) and not math.isfinite(v_)):
         METRICS[k_] = None
         NA.setdefault(k_, "not computable on the out-of-sample days")
-VERDICT = {"word": WORD, "why": [_cut(w_, 110) for w_ in _why], "next_bet": _cut(f"the forward read of {CFG['name']} frozen, from 10-10, registered first, on the engine with the feed mask and a late gate", 150)}
+VERDICT = {"word": WORD, "why": [_cut(w_, 110) for w_ in _why], "next_bet": _cut(f"the forward read of {CFG['name']} frozen, from 10-10, registered first, on this engine (gate +{DECIDE_MS} ms, feed mask)", 150)}
 CARD = {
-    "question": _cut("Which stale window, definition, discount and limit of the stale-book rule earn on weeks they were not chosen on, without the best 5%?", 200),
+    "question": _cut("Does buying after a burst, while the book has not moved, still make money on weeks it was not tuned on?", 200),
     "answer": _cut(f"{WORD}, class {CLASS}. E tuned out of sample: {TS['n']} entries net {sgn(TS['net'], 0)} USD ({sgn(TS['per'])} each, 95% {sgn(TS['per_lo'])} to {sgn(TS['per_hi'])}); without the best 5% {sgn(TS['per_ex_top5'])}.", 220),
     "implementation": [("Trade", "Buy the near token after a burst, book not moved"), ("Venue", "Polymarket 15m crypto Up/Down; Binance is input"), ("Rule", _cut(CFG["name"], 70)),
-                       ("Size", f"USD {CLIP_USD:g} a trade, USD {BOOK_USD:,.0f} book, 1x"), ("Costs", "taker fee 0.07 x p(1-p); +250 ms"), ("Window", f"{DAYS[0][5:]} to {DAYS[-1][5:]}, {24 * len(DAYS)}h, 1 regime")],
+                       ("Size", f"USD {CLIP_USD:g} a trade, USD {BOOK_USD:,.0f} book, 1x"), ("Costs", "taker fee 0.07 x p(1-p); gate +100, fill +250 ms"), ("Window", f"{DAYS[0][5:]} to {DAYS[-1][5:]}, {24 * len(DAYS)}h, 1 regime")],
     "big": [dict(mk("Net per entry", f"{sgn(TS['per'])} USD", f"95% {sgn(TS['per_lo'])} to {sgn(TS['per_hi'])}", gate="G5"), scope="test"),
             dict(mk("Without best 5%", f"{sgn(TS['per_ex_top5'])} USD", "above 0", gate="G6"), scope="test"),
             dict(mk("Win rate", pct(TS["win"]), f"needed {pct(TS['win_needed'])}", verdict="INFO"), scope="test"),
@@ -989,9 +1056,9 @@ CARD = {
                                      mk("Cells tried", f"{N_REGISTERED}", "", "INFO"), mk("Checks held", f"{VERIFY_PASSED} of {VERIFY_TOTAL}", "all", "INFO")]}],
     "sizes": {"cols": ["Size", "Net, USD", "Per entry", "Verdict"], "chosen": 0 if SIZED else None,
               "rows": [["1x" if SIZED else "1x info only", sgn(TS["net"], 0), sgn(TS["per"], 2), "PASS" if SIZED else "FAIL"]]},
-    "footer": [_cut(f"um-023 second pass, 2026-10-11: {N_REGISTERED} cells, each week chosen on the weeks before it; the first pass's grid is in git.", 160),
-               _cut(f"The {len(DAYS)} days were read whole by um-021 (where E was found); only the walk-forward record is out of sample for a choice.", 160),
-               _cut(f"{24 * len(DAYS)}h, {VERIFY_PASSED}/{VERIFY_TOTAL} checks; gate at the Binance print; {OLD_E[0]} frozen-feed entries of E not masked.", 160)]}
+    "footer": [_cut(f"{N_REGISTERED} cells, each week chosen on the weeks before it.", 160),
+               _cut(f"E was first read on all {len(DAYS)} days; only the walk-forward record is out of sample for a choice.", 160),
+               _cut(f"{24 * len(DAYS)}h, {VERIFY_PASSED}/{VERIFY_TOTAL} checks; gate {DECIDE_MS} ms and fill {LAT_MS} ms after the print; slot-wide silent feeds refused.", 160)]}
 _probs = REPORT.card_problems(CARD, metrics={k_: (None if v_ is None else float(v_)) for k_, v_ in METRICS.items()}, gates={g_["id"]: g_ for g_ in GATES}, word=WORD, carry=False)
 assert not _probs, _probs
 ''')
@@ -999,26 +1066,25 @@ assert not _probs, _probs
 code(r'''
 # ---- the study manifest fund.study/1 (the last cell of S7) ----
 from fundplat.data import derived
-TITLE = "Buying the near token after a Binance burst while the book has not moved: which stale window, definition, discount to fair value and limit earn on weeks they were not chosen on, and what does a later order cost?"
-QUESTION = "Does the stale-book rule, tuned each week on the weeks before it by a plateau rule over 162 cells (window, definition, discount to fair value, limit), beat test E as built out of sample without its best 5% at 250 ms?"
+TITLE = "Does buying right after a Binance burst, while the book has not moved, still make money on weeks it was not tuned on?"
+QUESTION = "Does test E, tuned each week on the weeks before it over 162 settings (window, definition, discount to fair value, limit), beat test E as built on new weeks without its best 5%?"
 RUN_AT = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
 _ms = lambda d: int(dt.datetime.strptime(d, "%Y-%m-%d").replace(tzinfo=dt.timezone.utc).timestamp() * 1000)
 _series, _unpinned = [], []
 for ms_ in LAT_SEATED:
     for d in DAYS:
-        m_ = derived.meta("tf15-table", RUNNER.key_of(d, ms_))
-        _series.append(dict(spec=f"tf15:{d}:decision-table:{ms_}ms", pin=m_["hash"], rows=int(COV.set_index("day").loc[d, "with_book"]), first_ts=_ms(d), last_ts=_ms(d) + 86_399_999,
+        m_ = derived.meta("tf15-table", RUNNER.key_of(d, ms_, DECIDE_MS, REF))
+        _series.append(dict(spec=f"tf15:{d}:decision-table:{ms_}ms-gate{DECIDE_MS}ms", pin=m_["hash"], rows=int(COV.set_index("day").loc[d, "with_book"]), first_ts=_ms(d), last_ts=_ms(d) + 86_399_999,
                             handle=None, cls="pin", trunc=False))
 INPUTS = {"digest": REPORT.inputs_digest([s_["pin"] for s_ in _series]), "series": _series, "unpinned": _unpinned}
 WINDOW = {"from": f"{DAYS[0]}T00:00Z", "to": f"{(dt.date.fromisoformat(DAYS[-1]) + dt.timedelta(days=1)).isoformat()}T00:00Z", "hours": 24 * len(DAYS), "regimes": 1}
 STUDY_VERIFY = {"suite": "tf15 engine, study and live checks", "passed": int(VERIFY_PASSED), "total": int(VERIFY_TOTAL), "books": int(TAB.W)}
 CAVEATS = [f"{len(OOS_DAYS)} out-of-sample days of one regime: one observation, not a promise",
-           f"um-021 read all {len(DAYS)} days whole and found E there: only the walk-forward record is out of sample",
+           f"E was first read on all {len(DAYS)} days: only the walk-forward record is out of sample for a choice",
            f"{N_REGISTERED} cells tried on each fold's choosing weeks: the deflated Sharpe prices the choice",
            "the final cell is chosen on every seated day: its own numbers there are in-sample",
-           "the gate reads the book at the Binance print; a live order learns of it later (timing audit F2)",
-           f"{OLD_E[0]} of E's entries sit on a frozen feed (book row 2 s old or more): not masked in this engine",
-           "our own tick-to-trade is an assumed 100 ms on top of the venue's 150 ms hold, not a measurement",
+           "the gate at t + 100 ms and the fill at t + 250 ms rest on an assumed 100 ms of our own, not a measurement",
+           "the feed mask refuses slot-wide silences only; one quiet book beside live ones still trades",
            "the random-burst null buys at the ask seen; an edge-limit cell fills a little more than its null"]
 assert all(len(c_) <= 110 for c_ in CAVEATS), [len(c_) for c_ in CAVEATS]
 HEADLINE = {"metric": "net PnL per entry, USD, walk-forward out-of-sample days, E tuned", "label": "Net per entry", "value": float(TS["per"]), "unit": "usd", "hurdle": 0.0, "gate": "G5"}
@@ -1030,7 +1096,8 @@ FIG_KINDS = {"fig:s3-e-equity": "equity-curve", "fig:s3-e-tradepnl": "equity-cur
              "fig:s4-e-oos2w": "out-of-sample-test", "fig:s4-e-oosfolds": "out-of-sample-test", "fig:s4-e-random": "significance-test",
              "fig:s4-cell-oos2w": "out-of-sample-test", "fig:s4-cell-oosfolds": "out-of-sample-test", "fig:s4-cell-random": "significance-test",
              "fig:s3-paths": "equity-curve", "fig:s4-weekly-ex5": "out-of-sample-test", "fig:s4-latency": "signal-decay", "fig:s4-delay-paths": "equity-curve", "fig:s4-costs": "cost-sensitivity", "fig:s4-fee-paths": "equity-curve", "fig:s4-slices": "edge-by-slice", "fig:s4-steady": "steadiness",
-             "fig:s4-exits": "exit-reason-breakdown", "fig:s5-risk": "drawdown-and-tail", "fig:s6-clip": "capacity-curve"}
+             "fig:s4-exits": "exit-reason-breakdown", "fig:s4-gates-paths": "equity-curve", "fig:s4-gates-weekly": "out-of-sample-test",
+             "fig:s4-gates-oos2w": "out-of-sample-test", "fig:s4-gates-folds": "out-of-sample-test", "fig:s4-gates-random": "significance-test", "fig:s5-risk": "drawdown-and-tail", "fig:s6-clip": "capacity-curve", "fig:s6-ladder": "capacity-curve"}
 assert {f_["id"] for f_ in FIGURES} == set(FIG_KINDS), set(FIG_KINDS) ^ {f_["id"] for f_ in FIGURES}
 for f_ in FIGURES:
     f_["kind"] = FIG_KINDS[f_["id"]]
@@ -1042,9 +1109,10 @@ STUDY = REPORT.build_manifest(
     strategy={"name": "Buy the near token a burst left under fair value while the book has not moved, 15m Up/Down", "thesis": "a Binance burst persists and a Polymarket book that has not moved since has not re-priced it",
               "market": "prediction markets", "instruments": ["BTC", "ETH", "SOL", "XRP"], "venues": ["Polymarket", "Binance (input)"], "style": "momentum"},
     rules={"entry": _cut(CFG["name"], 60), "exit": "hold to the outcome", "sizing": f"USD {CLIP_USD:g} a trade", "rebalance": None, "hedge": None, "hold": "to expiry",
-           "stop": f"a day's loss of USD {STOP_DAY_USD:.0f} stops the day [U]", "cost": "taker fee 0.07 x p(1-p); +250 ms (150 venue + 100 own)"},
-    params={"clip": {"value": CLIP_USD, "unit": "usd", "source": "owner"}, "latency_ms": {"value": float(LAT_MS), "unit": "ms", "source": "[U]"},
-            "venue_hold_ms": {"value": float(VENUE_HOLD_MS), "unit": "ms", "source": "[1]"}, "own_latency_ms": {"value": float(OWN_MS), "unit": "ms", "source": "[U]"},
+           "stop": f"a day's loss of USD {STOP_DAY_USD:.0f} stops the day [U]", "cost": "taker fee 0.07 x p(1-p); gate +100 ms, fill +250 ms"},
+    params={"clip": {"value": CLIP_USD, "unit": "usd", "source": "[U]"}, "latency_ms": {"value": float(LAT_MS), "unit": "ms", "source": "[U]"},
+            "venue_hold_ms": {"value": float(VENUE_HOLD_MS), "unit": "ms", "source": "[1]"}, "own_latency_ms": {"value": float(OWN_MS), "unit": "ms", "source": "[U]"}, "decide_ms": {"value": float(DECIDE_MS), "unit": "ms", "source": "[U]"},
+            "feed_age_max_s": {"value": float(C.AGE_MAX_S), "unit": "s", "source": "[U]"},
             "fee_rate": {"value": float(COSTS["cell"][1]["rates"][0]) if len(COSTS["cell"][1]["rates"]) == 1 else 0.07, "unit": "rate", "source": "[API]"},
             "stop_day_usd": {"value": STOP_DAY_USD, "unit": "usd", "source": "[U]"}, "dd_limit_usd": {"value": DD_LIMIT_USD, "unit": "usd", "source": "[U]"}},
     equity=_eqp, profile={"market": "predmkts", "markets": ["predmkts", "crypto"], "venues": ["polymarket", "binance"], "instruments": ["BTC, ETH, SOL, XRP 15m Up/Down", "spot aggTrades"], "bar": "15m"}, book=None)
@@ -1055,10 +1123,7 @@ display(REPORT.display_bundle(STUDY), raw=True)
 md(r'''
 ## A · Appendix
 
-Every entry of the final cell (the first forty rows; the arrays are in the kernel), the twenty best cells of the grid by the plateau rule's smoothed score on
-every seated day, and where the logic lives: the stale masks `tf15_cands` (`still_runs`, `ask_still_all`, `touch_still`, `BuyNearStale`), the second-pass grid,
-the plateau rule, the walk-forward, the delay shift and the new figures `tf15_stale`, the fills `tf15_bt.entries`, the splits and nulls `tf15_oos` and
-`tf15_oos_figs`, the per-entry figures `tf15_trade_figs`, the exits `tf15_exits`, the live form `tf15_live`, capacity `tf15_capacity`.
+The final cell's entries (the first forty rows) and the twenty best cells of the grid by the plateau rule's smoothed score on every seated day.
 ''')
 
 code(r'''

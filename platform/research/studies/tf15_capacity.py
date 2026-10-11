@@ -4,18 +4,18 @@ No I/O.
 THE FILL RULE. Every test's limit is the near token's ask at the decision second (`tf15_cands.quotes`); 250 ms later `tf15_bt.walk_buy` takes what rests at
 or under that price, at least 5 shares, and stops. A thin touch is a smaller trade, never a worse price. `fill_rule` reads, on a test's own entries, the
 share that got the whole clip (cost at least the clip less one cent), the share that got less, and the median USD of the smaller trades.
-OUR PRICE. Two definitions, each column and chart names its own. (1) The ask we saw: the rule as run. (2) Our edge price: fair value less the margin at the
+OUR PRICE. Two definitions, each column and chart names its own. (1) The ask we saw: the rule as run. (2) Fair value minus the discount (theta) at the
 decision second, `pu - theta` for an Up buy, `(1 - pu) - theta` for a Down buy (`edge_price`), the gate's own threshold, so every level at or under it still
-carries the edge the rule demands. Test C has no price gate: the formula is the same, C does not require it at entry, and its edge price can sit under the ask.
+carries the edge the rule demands. Test C has no price gate: the formula is the same, C does not require it at entry, and its fair value minus the discount can sit under the ask.
 THE WALK. `walk_to` walks each entry's ask ladder at its fill second (the ladder 250 ms after the decision, `tf15_bt.ladder_of`, four levels, the Down asks
 the mirror of the Up bids) with each trial clip up to a limit, never beyond it: shares, cost, fee, VWAP, levels used, filled in full, and the cents the VWAP
 sits over the best ask at the fill. `under_price` is the USD resting at or under a price. Depth past the fourth level is not in the table, so every depth
 number is a floor and a clip that needs a fifth level reads as not filled in full.
-THE RE-RUN. `rerun_at` re-runs a test through `tf15_bt.entries` with the clip and the limit raised from the ask seen to the edge price (`np.fmax`: where the
-edge price is under the ask seen, test C only, the limit stays the ask). The trigger is unchanged; only the fill may walk up. A higher limit and a clip at
+THE RE-RUN. `rerun_at` re-runs a test through `tf15_bt.entries` with the clip and the limit raised from the ask seen to fair value minus the discount (`np.fmax`: where the
+fair value minus the discount is under the ask seen, test C only, the limit stays the ask). The trigger is unchanged; only the fill may walk up. A higher limit and a clip at
 least the base clip fill wherever the base filled, so the re-run's windows are a superset of the base test's (checked on the data in `data_checks`).
-THE ESTIMATE. One row a test (`estimate`): entries a day; the USD at the ask seen and under the edge price at the fill second; levels used and cents over
-the ask at 20 and 100 USD; the largest clip that fills in full for 90% of entries when walking to the edge price; the largest clip whose re-run keeps the
+THE ESTIMATE. One row a test (`estimate`): entries a day; the USD at the ask seen and under fair value minus the discount at the fill second; levels used and cents over
+the ask at 20 and 100 USD; the largest clip that fills in full for 90% of entries when walking to fair value minus the discount; the largest clip whose re-run keeps the
 net an entry without the best 5% above zero (the largest such clip, the clips above zero named beside it); what that clip does a day. Participation (10% of the near-side USD
 traded after entry) is a sensitivity, [U], never used to set the clip. Our own order would change the book: that is not modelled.
 """
@@ -53,7 +53,7 @@ def ask_seen(tab, e):
 
 
 def edge_price(tab, e, theta=THETA):
-    """Our edge price at the decision second: `pu - theta` for an Up buy, `(1 - pu) - theta` for a Down buy. -> (N,)"""
+    """Fair value minus the discount at the decision second: `pu - theta` for an Up buy, `(1 - pu) - theta` for a Down buy. -> (N,)"""
     w, k, s = np.asarray(e["w"], int), np.asarray(e["k"], int), np.asarray(e["side"], int)
     pu = tab.pu[w, k].astype(float)
     return np.where(s > 0, pu - theta, 1.0 - pu - theta)
@@ -79,7 +79,7 @@ def _walk_levels(px, sz, usd, limit, rate):
 
 
 def walk_to(tab, e, clips=CLIPS, limit=None):
-    """Walk every entry's ask ladder at its fill second with each clip, never above `limit` (N,) (default: our edge price). -> dict of (N, X) arrays
+    """Walk every entry's ask ladder at its fill second with each clip, never above `limit` (N,) (default: fair value minus the discount). -> dict of (N, X) arrays
     shares, cost, fee, vwap, levels (levels the walk took from), full (cost at least the clip less a cent), cents (VWAP over the best ask at the fill,
     cents); and (N,) best, limit, and `clips`."""
     w, k, s = np.asarray(e["w"], int), np.asarray(e["k"], int), np.asarray(e["side"], int)
@@ -119,7 +119,7 @@ def fill_rule(e, clip=B.CLIP_USD):
                 small_med=float(np.median(cost[~full])) if (~full).any() else np.nan, n_small=int((~full).sum()))
 
 
-# ============================================================ the re-run with the limit raised to the edge price
+# ============================================================ the re-run with the limit raised to fair value minus the discount
 _Q = {}
 
 
@@ -146,7 +146,7 @@ def _rule(tab, masks, lab, t_min, limit, theta):
 
 
 def rerun_at(tab, masks, lab, clip, t_min, limit="edge", theta=THETA):
-    """Test `lab` re-run through `tf15_bt.entries` with `clip` USD a trade and the limit raised from the ask seen to our edge price (limit "edge"),
+    """Test `lab` re-run through `tf15_bt.entries` with `clip` USD a trade and the limit raised from the ask seen to fair value minus the discount (limit "edge"),
     or at the ask seen (limit "ask", the rule as run). The trigger is the test's own gate and time mask. -> entries dict in window order."""
     side, trig, lim = _rule(tab, masks, lab, t_min, limit, theta)
     return B.entries(tab, side, trig, lim, usd=float(clip))
@@ -295,8 +295,8 @@ def _at(clips, x):
 
 
 def estimate(tab, e, masks, lab, ndays, t_min=300, theta=THETA, clips=CLIPS, n_boot=2000):
-    """The capacity read of one test. -> dict: `row` (the table's numbers), `walk` (walk_to to the edge price), `curve` (rerun_curve), `usd_ask`,
-    `usd_edge` (N,) the USD at or under the ask seen and the edge price at the fill second, `room_c` (N,) the edge price less the ask seen in cents,
+    """The capacity read of one test. -> dict: `row` (the table's numbers), `walk` (walk_to to fair value minus the discount), `curve` (rerun_curve), `usd_ask`,
+    `usd_edge` (N,) the USD at or under the ask seen and fair value minus the discount at the fill second, `room_c` (N,) fair value minus the discount, less the ask seen, in cents,
     `fill` (fill_rule), `part` (participation clip [U]), `n`."""
     ask = ask_seen(tab, e)
     edge = edge_price(tab, e, theta)
@@ -357,18 +357,18 @@ def data_checks(tab, tests, masks, est, t_min=300, clip=B.CLIP_USD, theta=THETA)
         cap &= bool(np.all(w["vwap"][got] <= np.broadcast_to(w["limit"][:, None], got.shape)[got] + 1e-9))
     return [(f"the walk at the ask seen reproduces every entry's shares and cost, tests {', '.join(labs)}", rep_walk),
             (f"the re-run at the ask seen and {clip:g} USD reproduces every test's entries and net", rep_run),
-            ("every re-run to the edge price enters every window its base test entered, at every clip", sup),
-            ("no walk to the edge price pays above it", cap)]
+            ("every re-run to fair value minus the discount enters every window its base test entered, at every clip", sup),
+            ("no walk to fair value minus the discount pays above it", cap)]
 
 
 # ============================================================ the module's own checks
 def _fake_tab():
     """Three windows of one slot, three decision seconds, theta 0.05.
-    Window 0 (an Up buy, Up won): pu 0.62 so the edge price is 0.57; the ask seen is 0.50 every second; the Up asks are 0.50 x 60, 0.52 x 100, 0.55 x 100,
-    0.60 x 100 at seconds 1 and 2 (the fourth level over the edge price), but at second 0 they moved a cent up (0.51 x 60, ...) by the time the order met them. Up bids 0.48 x 30, 0.47 x 40.
-    Window 1 (a Down buy, Up lost): pu 0.30 so the Down edge price is 0.65; no Up asks; Up bids 0.40 x 50, 0.39 x 50, so the Down asks are 0.60 x 50 and
+    Window 0 (an Up buy, Up won): pu 0.62 so fair value minus the discount is 0.57; the ask seen is 0.50 every second; the Up asks are 0.50 x 60, 0.52 x 100, 0.55 x 100,
+    0.60 x 100 at seconds 1 and 2 (the fourth level over fair value minus the discount), but at second 0 they moved a cent up (0.51 x 60, ...) by the time the order met them. Up bids 0.48 x 30, 0.47 x 40.
+    Window 1 (a Down buy, Up lost): pu 0.30 so the Down fair value minus the discount is 0.65; no Up asks; Up bids 0.40 x 50, 0.39 x 50, so the Down asks are 0.60 x 50 and
     0.61 x 50 and the Down ask seen is 0.60.
-    Window 2 (an Up buy, Up won): pu 0.52 so the edge price 0.47 sits under the Up ask 0.50 x 100; Up bids 0.45 x 10.
+    Window 2 (an Up buy, Up won): pu 0.52 so fair value minus the discount 0.47 sits under the Up ask 0.50 x 100; Up bids 0.45 x 10.
     Prints: window 0 a buy of Up of 10 shares at 0.50 at 6.5 s, a sale of 4 at 0.48 at 20 s, a buy of Up of 6 at 0.52 at 30 s; window 1 a buy of Up of 100
     at 0.40 at 6.2 s."""
     t = object.__new__(B.Tab)
@@ -402,19 +402,19 @@ def checks():
     t = _fake_tab()
     e = dict(w=np.array([0, 1, 2]), k=np.array([1, 1, 1]), side=np.array([1, -1, 1]))
     edge = edge_price(t, e)
-    out.append(("our edge price is pu - theta for an Up buy and (1 - pu) - theta for a Down buy (0.57, 0.65, 0.47)", np.allclose(edge, [0.57, 0.65, 0.47], atol=1e-6)))
+    out.append(("fair value minus the discount is pu - theta for an Up buy and (1 - pu) - theta for a Down buy (0.57, 0.65, 0.47)", np.allclose(edge, [0.57, 0.65, 0.47], atol=1e-6)))
     wk = walk_to(t, e, (20.0, 50.0, 500.0), edge)
-    out.append(("20 USD to the edge price on 0.50 x 60, 0.52 x 100 takes one level, in full, at 0 c over the best ask",
+    out.append(("20 USD to fair value minus the discount on 0.50 x 60, 0.52 x 100 takes one level, in full, at 0 c over the best ask",
                 wk["levels"][0, 0] == 1 and bool(wk["full"][0, 0]) and abs(wk["cents"][0, 0]) < 1e-9))
     vw50 = 50.0 / (60.0 + 38.46)
     out.append(("PLANTED: 50 USD must use two levels (60 at 0.50 is 30 USD, then 38.46 at 0.52), in full, VWAP 0.5078",
                 wk["levels"][0, 1] == 2 and bool(wk["full"][0, 1]) and abs(wk["vwap"][0, 1] - 49.9992 / 98.46) < 1e-6 and abs(wk["vwap"][0, 1] - vw50) < 1e-4))
-    out.append(("PLANTED: 500 USD stops at the edge price 0.57 with a fourth level at 0.60 resting: three levels, 137 USD, not in full", wk["levels"][0, 2] == 3 and abs(wk["cost"][0, 2] - 137.0) < 1e-4
+    out.append(("PLANTED: 500 USD stops at fair value minus the discount 0.57 with a fourth level at 0.60 resting: three levels, 137 USD, not in full", wk["levels"][0, 2] == 3 and abs(wk["cost"][0, 2] - 137.0) < 1e-4
                 and not wk["full"][0, 2]))
-    out.append(("PLANTED: an edge price under the ask (0.47 against 0.50) fills nothing: 0 shares, 0 levels, not in full, 0 USD under it",
+    out.append(("PLANTED: fair value minus the discount under the ask (0.47 against 0.50) fills nothing: 0 shares, 0 levels, not in full, 0 USD under it",
                 wk["shares"][2, 0] == 0 and wk["levels"][2, 0] == 0 and not wk["full"][2, 0] and under_price(t, e, edge)[2] == 0.0))
     ua, ue = under_price(t, e, ask_seen(t, e)), under_price(t, e, edge)
-    out.append(("the Down asks mirror the Up bids: 30 USD at the Down ask seen 0.60, 60.5 USD under the Down edge price 0.65",
+    out.append(("the Down asks mirror the Up bids: 30 USD at the Down ask seen 0.60, 60.5 USD under the Down fair value minus the discount 0.65",
                 abs(ua[1] - 30.0) < 1e-4 and abs(ue[1] - 60.5) < 1e-4 and abs(ask_seen(t, e)[1] - 0.60) < 1e-6))
     px, sz = B.ladder_of(t, e["w"], e["k"], e["side"], buy=True)
     rate = np.full(3, 0.07)
@@ -431,10 +431,10 @@ def checks():
     run = rerun_at(t, masks, "T", 20.0, 300, limit="edge")
     out.append(("the re-run at the ask seen misses window 0 (the asks moved a cent up in 250 ms) and enters windows 1 and 2",
                 sorted(base["w"].tolist()) == [1, 2]))
-    out.append(("PLANTED: the re-run to the edge price is a superset in windows of the base test's and adds window 0 at 0.51",
+    out.append(("PLANTED: the re-run to fair value minus the discount is a superset in windows of the base test's and adds window 0 at 0.51",
                 is_superset(base, run) and sorted(run["w"].tolist()) == [0, 1, 2] and abs(run["vwap"][run["w"] == 0][0] - 0.51) < 1e-6))
     out.append(("PLANTED: the base test is not a superset of the re-run (window 0 missing), and the check says so", not is_superset(run, base)))
-    out.append(("where the edge price is under the ask seen (window 2) the re-run keeps the ask as its limit and fills as the base does",
+    out.append(("where fair value minus the discount is under the ask seen (window 2) the re-run keeps the ask as its limit and fills as the base does",
                 abs(run["cost"][run["w"] == 2][0] - base["cost"][base["w"] == 2][0]) < 1e-9))
     run_none = B.entries(t, np.where(g_up, 1, np.where(g_dn, -1, 0)), g_up | g_dn, np.full((3, 3), 0.40), usd=20.0)
     out.append(("PLANTED: a limit under every ask gives no entry", len(run_none["net"]) == 0))
@@ -536,11 +536,11 @@ def _usd(v):
     return f"{v:,.0f}" if np.isfinite(v) else "n/a"
 
 
-def howdeep_fig(EST, window, notes, question="How deep do we go if we spend 20, 50, 100, 200 or 500 USD?"):
-    """Every test's entries, the ask ladder at the fill second walked with each clip up to OUR EDGE PRICE, never beyond. Top left: the share of A's and E's
+def howdeep_fig(EST, window, notes, question="How far up the book does a bigger order have to go?"):
+    """Every test's entries, the ask ladder at the fill second walked with each clip up to FAIR VALUE MINUS THE DISCOUNT, never beyond. Top left: the share of A's and E's
     entries that used 1, 2, 3 or 4 levels in full or could not fill in full, stacked a clip. Bottom left: the mean levels used (on the entries that got any
     fill), every test. Right: the cents the VWAP sits over the best ask (median, 25th to 75th band for A and E; the median in grey for the others), the
-    median room to the edge price (edge price less the ask seen) for A and E as dotted ink decision lines."""
+    median room (fair value minus the discount, less the ask seen) for A and E as dotted ink decision lines."""
     plt, fs = _fig_imports()
     from matplotlib.lines import Line2D
     from matplotlib.patches import Patch
@@ -578,7 +578,7 @@ def howdeep_fig(EST, window, notes, question="How deep do we go if we spend 20, 
     a1.set_yticks([0, 0.25, 0.5, 0.75, 1.0])
     a1.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0%}"))
     a1.set_ylabel("share of entries")
-    a1.set_title(f"tests {FOCUS[0]} and {FOCUS[1]}: levels used, walking to our edge price", fontsize=9.5, loc="left", pad=14)
+    a1.set_title(f"tests {FOCUS[0]} and {FOCUS[1]}: levels used, walking to fair value minus the discount", fontsize=9.5, loc="left", pad=14)
     a1.grid(axis="x", visible=False)
     h1 = [Patch(facecolor=shades[i], label=f"{i + 1} level" + ("s" if i else "")) for i in range(LEVELS)] + [Patch(facecolor=BAD, label="not filled in full")]
     a1.legend(handles=h1, loc="upper left", bbox_to_anchor=(1.0, 1.0), fontsize=7.5, frameon=False, handlelength=1.0, borderaxespad=0.2)
@@ -597,7 +597,7 @@ def howdeep_fig(EST, window, notes, question="How deep do we go if we spend 20, 
     a2.set_title("every test: mean levels used (entries that got a fill)", fontsize=9.5, loc="left")
     _hline(a2, LEVELS, "four levels: the table holds no more", INK, x=0.01, va="bottom")
     _label_ends(a2, clips[-1] * 1.02, ends, labs, [col[lab] for lab in labs], gap=0.085, dx=1.08)
-    # right: cents over the best ask, with the room to the edge price
+    # right: cents over the best ask, with the room to fair value minus the discount
     ends, ymax = [], 0.0
     for lab in labs:
         wk = EST[lab]["walk"]
@@ -613,13 +613,13 @@ def howdeep_fig(EST, window, notes, question="How deep do we go if we spend 20, 
         ymax = max(ymax, float(np.nanmax(q[:, 1])))
     rooms = {lab: EST[lab]["row"]["room_med"] for lab in FOCUS if lab in EST}
     for i, (lab, r) in enumerate(sorted(rooms.items(), key=lambda t: t[1])):
-        _hline(a3, r, f"{lab}: our edge price, the room we have ({r:.1f} c, median)", INK, x=0.01, va="top" if i == 0 and len(rooms) > 1 else "bottom")
+        _hline(a3, r, f"{lab}: fair value minus the discount, the room we have ({r:.1f} c, median)", INK, x=0.01, va="top" if i == 0 and len(rooms) > 1 else "bottom")
     ymax = max(ymax, max(rooms.values()) if rooms else 0.0)
     a3.set_ylim(-0.3, ymax * 1.15 + 0.5)
     _logx(a3, clips)
     a3.set_xlabel("clip, USD (log)", fontsize=8.5)
-    a3.set_ylabel("cents a share the VWAP pays over the best ask")
-    a3.set_title("cents the order pays over the best ask, walking to our edge price", fontsize=9.5, loc="left")
+    a3.set_ylabel("cents a share paid over the best ask")
+    a3.set_title("cents the order pays over the best ask, walking to fair value minus the discount", fontsize=9.5, loc="left")
     a3.legend(handles=[Line2D([], [], color=N["ink2"], lw=2.0, marker="o", ms=4, label="mean, entries that got a fill"),
                        Patch(facecolor=N["ink2"], alpha=0.14, label=f"25th to 75th percentile, {FOCUS[0]} and {FOCUS[1]}")],
                loc="upper left", fontsize=7.8, frameon=True, facecolor=N["surface"], edgecolor="none", framealpha=1.0)
@@ -627,10 +627,10 @@ def howdeep_fig(EST, window, notes, question="How deep do we go if we spend 20, 
     return fig
 
 
-def underedge_fig(EST, DEP, window, notes, clip=B.CLIP_USD, t_min=300, question="How many dollars sit under our edge price when a test fires?"):
-    """Left: per test, the USD resting at or under our edge price at the fill second (median dot, 10th to 90th whisker, 25th to 75th thick), the USD at or
+def underedge_fig(EST, DEP, window, notes, clip=B.CLIP_USD, t_min=300, question="How many dollars can we buy at a price that still has our edge?"):
+    """Left: per test, the USD resting at or under fair value minus the discount at the fill second (median dot, 10th to 90th whisker, 25th to 75th thick), the USD at or
     under the ask we saw beside it as a muted hollow marker, the clip as a dotted ink vertical. Middle: the share of entries where 20, 50, 100 and 200 USD
-    fit under the edge price. Right: the median USD at the best ask by seconds left, every window, both tokens, a line a coin, the entry cut as a vertical."""
+    fit under fair value minus the discount. Right: the median USD at the best ask by seconds left, every window, both tokens, a line a coin, the entry cut as a vertical."""
     plt, fs = _fig_imports()
     from matplotlib.lines import Line2D
     N = fs.NEUTRAL
@@ -664,12 +664,12 @@ def underedge_fig(EST, DEP, window, notes, clip=B.CLIP_USD, t_min=300, question=
     a1.grid(axis="y", visible=False)
     _vline(a1, clip, f"{clip:g} USD clip", INK, y=1.0, va="bottom")
     a1.set_xlabel("USD on the near token's ask at the fill second (log; at least: four levels)", fontsize=8.5)
-    a1.set_title("USD at or under our edge price, a test", fontsize=9.5, loc="left", pad=14)
+    a1.set_title("USD at or under fair value minus the discount, a test", fontsize=9.5, loc="left", pad=14)
     fig.legend(handles=[Line2D([], [], color=N["ink2"], lw=5.0, label="25th to 75th"), Line2D([], [], color=N["ink2"], lw=1.2, label="10th to 90th"),
                        Line2D([], [], color=N["ink2"], marker="o", ls="", ms=6, label="median"),
                        Line2D([], [], color=N["muted"], marker="D", ls="", ms=5, markerfacecolor="none", markeredgecolor=N["muted"], label="median at the ask we saw")],
                loc="upper right", bbox_to_anchor=(0.97, 1 - 0.40 / fig.get_size_inches()[1]), ncol=4, fontsize=8, frameon=False)
-    # middle: the share where a clip fits under the edge price
+    # middle: the share where a clip fits under fair value minus the discount
     at.axis("off")
     at.set_ylim(a1.get_ylim())
     fit_clips = [x for x in (20.0, 50.0, 100.0, 200.0) if x in EST[labs[0]]["row"]["fits"]]
@@ -710,7 +710,7 @@ def underedge_fig(EST, DEP, window, notes, clip=B.CLIP_USD, t_min=300, question=
     return fig
 
 
-def earnclip_fig(EST, window, notes, question="What does each clip earn a day when we pay up to our edge price?"):
+def earnclip_fig(EST, window, notes, question="How big an order keeps the edge if we pay up to our price?"):
     """Small multiples, one a test: the re-run's net an entry against the clip (95% band by slot) and the net an entry without the best 5% (muted), zero as
     the dotted ink decision line; the largest clip whose ex-5% net stays above zero marked green, or a red marker at the smallest clip when none does; the
     net a day at the marked clip (entries a day x net an entry) in the corner. The eighth panel holds the key."""
@@ -756,7 +756,7 @@ def earnclip_fig(EST, window, notes, question="What does each clip earn a day wh
         a.set_xlabel("clip, USD (log)", fontsize=8)
     if len(ax) > len(labs):
         k = ax[len(labs)]
-        k.legend(handles=[Line2D([], [], color=MOD, lw=2.0, marker="o", ms=3.5, label="net an entry, paying up to\nour edge price"),
+        k.legend(handles=[Line2D([], [], color=MOD, lw=2.0, marker="o", ms=3.5, label="net an entry, paying up to\nour fair value minus the discount"),
                           Patch(facecolor=MOD, alpha=0.16, label="95% by 15-minute slot"),
                           Line2D([], [], color=N["muted"], lw=1.6, marker="o", ms=3, label="net an entry without\nthe best 5% of entries"),
                           Line2D([], [], color=INK, ls=":", lw=1.3, label="zero"),
@@ -789,19 +789,19 @@ def notes_howdeep(EST):
         if lab not in EST:
             continue
         r = EST[lab]["row"]
-        out.append(f"Test {lab}, walking to our edge price: at 20 USD it uses {r['lv'][j20]:.2f} levels on average and pays {r['ct'][j20]:.2f} c over the best ask on average, "
-                   f"{r['full'][j20]:.0%} of entries filled in full; at 100 USD {r['lv'][j100]:.2f} levels, {r['ct'][j100]:.2f} c, {r['full'][j100]:.0%} in full. "
-                   f"The median room to the edge price is {r['room_med']:.1f} c.")
+        out.append(f"Test {lab}: a 20 USD order walks {r['lv'][j20]:.2f} levels and pays {r['ct'][j20]:.2f} c over the best ask on average, "
+                   f"{r['full'][j20]:.0%} of entries filled in full; a 100 USD order {r['lv'][j100]:.2f} levels, {r['ct'][j100]:.2f} c, {r['full'][j100]:.0%} in full. "
+                   f"The median room up to our price is {r['room_med']:.1f} c.")
     rooms = [(lab, EST[lab]["row"]) for lab in FOCUS if lab in EST]
     used = [lab for lab, r in rooms if np.isfinite(r["ct"][j100]) and r["ct"][j100] >= r["room_med"]]
     out.append("Is the room used up? " + (f"For {', '.join(used)} the mean cost at 100 USD reaches the median room." if used else
                "No: at 100 USD the order pays on average " + " and ".join(f"{lab} {r['ct'][j100]:.2f} c of a {r['room_med']:.1f} c room" for lab, r in rooms)
-               + "; the book runs out of size under the edge price before the price walks up to it."))
+               + "; the book runs out of size under our price before the price walks up to it."))
     oth = [lab for lab in EST if lab not in FOCUS]
     out.append("The other tests at 100 USD, mean levels and mean cents: " + ", ".join(f"{lab} {EST[lab]['row']['lv'][j100]:.2f} and {EST[lab]['row']['ct'][j100]:.2f} c" for lab in oth)
-               + (f". Test C has no price gate: its edge price is under the ask seen on {EST['C']['row']['edge_below_ask']:.0%} of its entries, which then fill nothing at that price."
+               + (f". Test C has no price gate: its fair value minus the discount is under the ask seen on {EST['C']['row']['edge_below_ask']:.0%} of its entries, which then fill nothing at that price."
                   if "C" in EST else "."))
-    out.append("Four levels is a floor: a clip that needs a fifth level counts as not filled in full, so the red share is an upper bound. Our own order would change the book; that is not modelled.")
+    out.append("Four levels is a floor: a clip that needs a fifth level counts as not filled in full, so the red share is an upper bound. Our own order moving the book is not modelled.")
     return out
 
 
@@ -811,15 +811,15 @@ def notes_underedge(EST, DEP, clip=B.CLIP_USD, t_min=300):
         if lab not in EST:
             continue
         r = EST[lab]["row"]
-        out.append(f"Test {lab}: a median {_usd(r['usd_edge_med'])} USD sits under our edge price at the fill second (10th percentile {_usd(r['usd_edge_p10'])}), against "
-                   f"{_usd(r['usd_ask_med'])} at the ask we saw; {r['fits'][20.0]:.0%} of entries fit 20 USD under the edge price and {r['fits'][100.0]:.0%} fit 100 USD.")
+        out.append(f"Test {lab}: a median {_usd(r['usd_edge_med'])} USD can be bought at our price at the fill second (10th percentile {_usd(r['usd_edge_p10'])}), against "
+                   f"{_usd(r['usd_ask_med'])} at the ask we saw; {r['fits'][20.0]:.0%} of entries fit 20 USD at our price and {r['fits'][100.0]:.0%} fit 100 USD.")
     t = DEP["t_mid"]
     coins = [c for c in COIN_NAMES if c in DEP]
     early, late, tail = t >= 600, (t >= t_min) & (t < 450), t < 120
     out.append("The book thins into expiry. Median USD at the best ask, 900 to 600 s left against 450 to 300 s and the last two minutes: "
                + ", ".join(f"{c.upper()} {_usd(float(np.nanmedian(DEP[c]['touch_med'][early])))}, {_usd(float(np.nanmedian(DEP[c]['touch_med'][late])))} "
                            f"and {_usd(float(np.nanmedian(DEP[c]['touch_med'][tail])))}" for c in coins) + ".")
-    out.append("Every number is at least the value shown: the table keeps four levels a side. The pinned archive holds ten; a re-seat could widen the ladder, not done here.")
+    out.append("Every number is at least the value shown: the table keeps four levels a side.")
     return out
 
 
@@ -841,7 +841,7 @@ def notes_earnclip(EST, ndays):
     out.append("Paying up adds entries the ask seen missed (the book moved in the 250 ms), and every re-run enters every window its base test entered. At 20 USD the net "
                "without the best 5%, re-run against the rule as run: " + ", ".join(f"{lab} {EST[lab]['curve'][j20]['ex5']:+.3f} against {EST[lab]['row']['base_ex5']:+.3f}"
                                                                               for lab in FOCUS if lab in EST)
-               + ". Test C has no price gate; where its edge price is under the ask seen its limit stays the ask.")
+               + ". Test C has no price gate; where its fair value minus the discount is under the ask seen its limit stays the ask.")
     out.append(f"Participation sensitivity [U], not used to set the clip: {PART:.0%} of the median near-side USD traded from the entry second to expiry is "
                + ", ".join(f"{lab} {_usd(EST[lab]['part'])}" for lab in EST) + " USD. The prints' side labels are uncertain.")
     return out
@@ -857,7 +857,7 @@ def estimate_table(EST):
         j20, j100 = _at(clips, 20.0), _at(clips, 100.0)
         out.append({"Test": lab, "Entries a day": f"{r['per_day']:,.1f}",
                     "USD at the ask we saw (median entry)": _usd(r["usd_ask_med"]),
-                    "USD under our edge price (median, 10th pct)": f"{_usd(r['usd_edge_med'])} ({_usd(r['usd_edge_p10'])})",
+                    "USD under fair value minus the discount (median, 10th pct)": f"{_usd(r['usd_edge_med'])} ({_usd(r['usd_edge_p10'])})",
                     "At 20 USD: levels used, cents over the ask": f"{r['lv'][j20]:.2f}, {r['ct'][j20]:.2f} c",
                     "At 100 USD: levels used, cents over the ask, filled in full": f"{r['lv'][j100]:.2f}, {r['ct'][j100]:.2f} c, {r['full'][j100]:.0%}",
                     f"Largest clip that fills in full for {FULL_SHARE:.0%} of entries": _usd(r["full_clip"]) if r["full_clip"] > 0 else "none",
