@@ -1,3 +1,70 @@
 {
-  "$comment": "Research-room labels per study, keyed studies/<file>.ipynb: markets = one or more of crypto, equities, rates, predmkts, the main one first; format = exactly one of carry, directional, short_vol, rel_value, evidence; style (optional) = systematic or discretionary. A study's own manifest (profile.markets, format, tags.style) wins over this file, and the two must agree while both exist. Held by research/check_labels.py."
+  "$comment": "The Research room's labels per study (the owner, 2026-09-28, B-0285; tags 2026-10-05, B-0503): markets = one or more of crypto, equities, rates, predmkts, the MAIN one first; format = exactly one of carry, directional, short_vol, rel_value, evidence; style (optional) = systematic or discretionary, a claim the study types, shown until the study is re-run and its manifest carries tags.style. A study's own manifest (profile.markets, format, tags.style) wins over this file, and the two must agree while both exist. The name's market word is an identity word, not a label (the-naming.md). Held by research/check_labels.py.",
+  "studies/2026-09-27-xasset-sofr-hike-tail-put-bill.ipynb": {
+    "markets": [
+      "rates",
+      "predmkts"
+    ],
+    "format": "short_vol",
+    "style": "systematic"
+  },
+  "studies/2026-09-27-xasset-sofr-hike-tail-hedge-polymarket.ipynb": {
+    "markets": [
+      "predmkts",
+      "rates"
+    ],
+    "format": "evidence"
+  },
+  "studies/2026-09-27-xasset-sofr-hike-tail-scenario.ipynb": {
+    "markets": [
+      "rates",
+      "predmkts"
+    ],
+    "format": "rel_value",
+    "style": "discretionary"
+  },
+  "studies/2026-10-04-predmkts-yes-systematically-overpriced.ipynb": {
+    "markets": [
+      "predmkts"
+    ],
+    "format": "evidence"
+  },
+  "studies/2026-10-04-xasset-skhynix-four-leg-static-hold.ipynb": {
+    "markets": [
+      "equities",
+      "crypto"
+    ],
+    "format": "carry",
+    "style": "discretionary"
+  },
+  "studies/2026-09-22-equities-skhynix-perp-pair.ipynb": {
+    "markets": [
+      "equities"
+    ],
+    "format": "carry",
+    "style": "discretionary"
+  },
+  "studies/2026-09-22-xasset-skhynix-four-leg-ratio-hedge.ipynb": {
+    "markets": [
+      "equities",
+      "crypto"
+    ],
+    "format": "carry",
+    "style": "systematic"
+  },
+  "studies/2026-10-04-equities-skhynix-spread-intraday.ipynb": {
+    "markets": [
+      "equities"
+    ],
+    "format": "directional",
+    "style": "systematic"
+  },
+  "studies/2026-10-11-predmkts-binance-burst-15m-updown-stale-book.ipynb": {
+    "markets": [
+      "predmkts",
+      "crypto"
+    ],
+    "format": "directional",
+    "style": "systematic"
+  }
 }

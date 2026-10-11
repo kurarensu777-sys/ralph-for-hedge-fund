@@ -1,0 +1,59 @@
+{
+  "$comment": "labels.json entries of the studies moved to research/archive/ on the owner's word 2026-10-11, kept so a restore has them: on a move back to studies/, put the entry back in labels.json under its studies/<file> key. check_labels reads studies/ only.",
+  "archive/2026-10-07-predmkts-binance-polymarket-crypto-15m-latency.ipynb": {
+    "markets": [
+      "predmkts",
+      "crypto"
+    ],
+    "format": "directional",
+    "style": "systematic"
+  },
+  "archive/2026-10-07-predmkts-binance-price-signal-15m-updown.ipynb": {
+    "markets": [
+      "predmkts",
+      "crypto"
+    ],
+    "format": "directional",
+    "style": "systematic"
+  },
+  "archive/2026-10-07-predmkts-binance-15m-updown-tail-buy.ipynb": {
+    "markets": [
+      "predmkts",
+      "crypto"
+    ],
+    "format": "directional",
+    "style": "systematic"
+  },
+  "archive/2026-10-07-predmkts-binance-15m-updown-near-certain.ipynb": {
+    "markets": [
+      "predmkts",
+      "crypto"
+    ],
+    "format": "directional",
+    "style": "systematic"
+  },
+  "archive/2026-10-07-predmkts-binance-15m-updown-edge-taker.ipynb": {
+    "markets": [
+      "predmkts",
+      "crypto"
+    ],
+    "format": "directional",
+    "style": "systematic"
+  },
+  "archive/2026-10-07-predmkts-binance-15m-updown-passive-quote.ipynb": {
+    "markets": [
+      "predmkts",
+      "crypto"
+    ],
+    "format": "directional",
+    "style": "systematic"
+  },
+  "archive/2026-10-11-predmkts-binance-burst-15m-updown-four-tests.ipynb": {
+    "markets": [
+      "predmkts",
+      "crypto"
+    ],
+    "format": "directional",
+    "style": "systematic"
+  }
+}

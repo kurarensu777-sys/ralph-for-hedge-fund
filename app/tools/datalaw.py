@@ -62,6 +62,9 @@ FUND = Path(os.environ.get("FUND_ROOT") or Path(__file__).resolve().parents[2]).
 REPOS = ("app", "platform")           # database/ is the data layer itself
 SUFFIXES = (".py", ".ts", ".tsx", ".mts", ".cts", ".js", ".mjs", ".cjs")
 SKIP_DIRS = {"node_modules", ".venv", "venv", "dist", "fixtures", "__fixtures__", "__pycache__", ".git"}
+# the published studies and their build scripts are a record, read on GitHub; they ran against the
+# private platform package, which does not ship, so this law does not hold them
+SKIP_PREFIXES = ("platform/research/studies/", "platform/research/archive/")
 # this check and its test spell every forbidden shape on purpose
 SELF = {"app/tools/datalaw.py", "app/tools/tests/test_datalaw.py"}
 
@@ -140,7 +143,7 @@ def _walk(repo: Path) -> list[str]:
     else:
         files = [p.relative_to(repo).as_posix() for p in repo.rglob("*") if p.is_file()]
     return sorted(f for f in files if f.endswith(SUFFIXES) and not SKIP_DIRS & set(f.split("/")[:-1])
-                  and (repo / f).is_file())
+                  and not f"{repo.name}/{f}".startswith(SKIP_PREFIXES) and (repo / f).is_file())
 
 
 def _py_hits(rel: str, text: str) -> list[tuple[int, str]]:
