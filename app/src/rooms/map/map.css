@@ -1,0 +1,98 @@
+/* ROOM: map. The canvas is React Flow (base.css only); everything drawn on it is ours, scoped here. */
+
+.map-main { position: relative; height: 100%; min-height: 0 }
+.map-canvas { position: absolute; inset: 0; background: var(--bg) }
+.map-canvas .react-flow { background: transparent; --xy-edge-label-background-color: var(--bg); --xy-edge-label-color: var(--faint) }
+.map-canvas .react-flow__node { cursor: pointer }
+.map-canvas .react-flow__handle { opacity: 0; width: 1px; height: 1px; min-width: 0; min-height: 0; border: 0; background: none; pointer-events: none }
+.map-canvas .react-flow__attribution { background: transparent; font-size: 9px; opacity: .45 }
+.map-canvas .react-flow__attribution a { color: var(--faint) }
+.map-err { position: absolute; top: 8px; left: 12px; z-index: 5; color: var(--fail); font: var(--fs-sm) var(--mono) }
+
+/* a leaf */
+.map-n { box-sizing: border-box; width: 100%; height: 100%; background: var(--panel); border: 1px solid var(--line2); border-radius: var(--r-md); padding: 5px 9px; overflow: hidden; transition: opacity .12s }
+.map-n:hover { background: var(--panel2); border-color: var(--line3) }
+.map-n.map-own { border-left: 3px solid var(--c); padding-left: 7px }
+.map-n-h { display: flex; align-items: center; gap: 6px; height: 16px; min-width: 0 }
+.map-n-l { flex: 1; min-width: 0; font: 600 var(--fs-md) var(--sans); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.map-n-s { font: var(--fs-xs)/14px var(--mono); color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.map-k-dir .map-n-l, .map-k-agent .map-n-l, .map-k-worktree .map-n-l, .map-k-remote .map-n-l { font: 500 var(--fs-sm) var(--mono) }
+.map-k-dir, .map-k-agent { padding-top: 4px; padding-bottom: 4px }
+.map-k-worktree { border-style: dashed }
+.map-k-external { background: var(--bg2) }
+.map-n.map-s-fail { border-color: var(--fail-line) }
+.map-k-dashboard.map-s-ok { border-color: var(--ok-line) }
+.map-k-dashboard.map-own.map-s-ok { border-left-color: var(--c) }
+.map-also { display: inline-flex; align-items: center; gap: 2px; flex: none }
+.map-also-d { width: 6px; height: 6px; border-radius: 50%; background: var(--c); flex: none }
+.map-more { font: var(--fs-cap) var(--mono); color: var(--faint); margin-left: 2px }
+
+/* a group: a titled frame; the top-level frames are dashed */
+.map-g { box-sizing: border-box; width: 100%; height: 100%; border: 1px solid var(--line); border-radius: var(--r-lg); background: #ffffff04; transition: opacity .12s }
+.map-g.map-top { border-style: dashed; border-color: var(--line2); background: none }
+.map-g.map-k-repo { background: var(--bg2); border-color: var(--line2) }
+.map-g.map-own { border-top: 2px solid var(--c) }
+.map-g.map-s-fail { border-color: var(--fail-line) }
+.map-g-h { display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 12px; min-width: 0 }
+.map-g-l { font: 600 var(--fs-md) var(--sans); color: var(--text); white-space: nowrap; flex: none }
+.map-g.map-top > .map-g-h .map-g-l { font: 600 var(--fs-cap) var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint) }
+.map-g-s2 { margin: -9px 12px 0; font: var(--fs-xs) var(--mono); color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.map-g-s { flex: 1; min-width: 0; font: var(--fs-xs) var(--mono); color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+
+/* a pipeline stage: its standing in its own word, never a health colour it did not earn */
+.map-stage { box-sizing: border-box; width: 100%; height: 100%; border: 1px solid var(--line2); border-radius: var(--r-md); background: var(--panel); padding: 8px 10px; overflow: hidden; transition: opacity .12s }
+.map-stage:hover { background: var(--panel2) }
+.map-stage-h { display: flex; align-items: center; gap: 6px; min-width: 0 }
+.map-stage-k { font: 600 var(--fs-sm) var(--mono); color: var(--faint) }
+.map-stage-l { flex: 1; min-width: 0; font: 600 var(--fs-lg) var(--sans); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.map-stage-w { font: 600 var(--fs-xs) var(--mono); letter-spacing: .08em; margin-top: 3px; color: var(--faint) }
+.map-stage-holds { list-style: none; margin: 7px 0 0; padding: 0; font: var(--fs-sm)/15px var(--sans); color: var(--dim) }
+.map-stage-holds li { overflow-wrap: anywhere }
+.map-stage-row { display: grid; grid-template-columns: 190px 118px 1fr; align-items: center; padding: 0 12px }
+.map-stage-row .map-stage-w { margin: 0 }
+.map-stage-hold { font: var(--fs-sm) var(--sans); color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.map-st-live { border-color: var(--ok-line) } .map-st-live .map-stage-w { color: var(--ok) }
+.map-st-human { border-color: var(--ask-line) } .map-st-human .map-stage-w { color: var(--ask) }
+.map-st-scaffold { border-style: dashed; border-color: var(--line3) } .map-st-scaffold .map-stage-w { color: var(--dim) }
+.map-st-missing { border-style: dashed; background: none } .map-st-missing .map-stage-w { color: var(--faint) }
+.map-st-external { background: var(--bg2) }
+.map-st-fail { border-color: var(--fail) } .map-st-fail .map-stage-w { color: var(--fail) }
+.map-st-unknown { border-style: dotted }
+
+/* search and hover */
+.map-hit { outline: 2px solid var(--accent); outline-offset: 1px }
+.map-dim { opacity: .28 }
+.map-hot { border-color: var(--dim) }
+
+/* edges */
+.map-canvas .react-flow__edge-path { stroke-width: 1.2 }
+.map-canvas .map-e-hot .react-flow__edge-path { stroke-width: 1.8 }
+.map-canvas .map-e-writes .react-flow__edge-path { stroke-dasharray: 3 3 }
+.map-canvas .map-e-loop .react-flow__edge-path, .map-canvas .map-e-guarded .react-flow__edge-path { stroke-dasharray: 5 4 }
+.map-canvas .map-e-dim { opacity: .15 }
+.map-canvas .react-flow__edge-text { font: var(--fs-cap) var(--mono); fill: var(--faint) }
+.map-canvas .map-e-loop .react-flow__edge-text { fill: var(--ok) }
+.map-canvas .react-flow__edge-textbg { fill: var(--bg) }
+
+
+/* the side list and the head */
+.map-nodot { width: 7px; flex: none }
+.map-ovs { display: flex; gap: 6px; flex-wrap: wrap; padding: 4px var(--s6) 8px }
+.map-legend { display: grid; gap: 5px; padding: 4px var(--s6) 8px; font: var(--fs-xs) var(--mono); color: var(--faint) }
+.map-legend span { display: flex; align-items: center; gap: 7px }
+.map-prob { cursor: default }
+.map-search { width: 210px }
+
+/* the drawer */
+.map-dr-list { display: grid; gap: 3px; margin: 4px 0 14px; padding: 0 }
+ul.map-dr-list { list-style: none; font-size: var(--fs-md); color: var(--dim) }
+.map-dr-row { display: flex; align-items: baseline; gap: 8px; font-size: var(--fs-md); min-width: 0; overflow-wrap: anywhere }
+.map-dr-row .dot { align-self: center }
+/* the last commit: sha and repo stay whole, the subject takes the rest and wraps */
+.map-dr-commit > :first-child, .map-dr-commit > :last-child { flex: none; white-space: nowrap }
+.map-dr-commit > :nth-child(2) { flex: 1; min-width: 0 }
+.map-dr-i { font: var(--fs-sm) var(--mono); color: var(--faint); width: 7px }
+.map-dr-st { display: inline-flex; align-items: center; gap: 6px }
+.map-dr-link { border: 0; background: none; padding: 2px 0; color: var(--text); font: var(--fs-md) var(--sans); text-align: left; cursor: pointer; overflow-wrap: anywhere }
+.map-dr-link:hover { color: var(--accent) }
+.map-dr-go { margin-top: 6px }

@@ -1,0 +1,33 @@
+{
+  "name": "@fund/db",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The fund's one data layer for node (the cockpit): typed ops-store functions and the migration runner, mirroring the python fund_db.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "./src/index.ts",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "test": "node --test --test-concurrency=1 test/*.test.ts",
+    "migrate": "node src/cli.ts migrate",
+    "migrate:status": "node src/cli.ts migrate --status"
+  },
+  "dependencies": {
+    "pg": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/pg": "^8.15.0",
+    "typescript": "^5.6.3"
+  }
+}

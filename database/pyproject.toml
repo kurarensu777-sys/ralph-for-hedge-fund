@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fund_db"
+version = "0.1.0"
+description = "The fund's one data layer: the PostgreSQL ops store, the Parquet market lake (and a dormant hot log)."
+requires-python = ">=3.11"
+dependencies = [
+  "psycopg[binary]>=3.2",
+  "duckdb>=1.1",
+  "pyarrow>=16",
+  "pandas>=2.2",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8", "pyflakes>=3"]
+
+[project.scripts]
+fund-db = "fund_db.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["py"]
+include = ["fund_db*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

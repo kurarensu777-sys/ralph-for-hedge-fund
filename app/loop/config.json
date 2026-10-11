@@ -1,0 +1,9 @@
+{
+  "$comment": "The self-improvement loop's autonomy setting (server/loop/config.ts). It lived as the `loop` object of the retired root agents.json until 2026-09-25; the values moved unchanged. autoApply (the Loop room's Auto / Manual switch; true = auto): a pass applies what it may, sends what it may not write to the agent whose writes cover it (that agent lands or declines it), and reverts worse ones. The loop engine never writes this file (server/loop/config.ts railFor); the owner's switch does (setAutoApply).",
+  "loop": {
+    "autoApply": true,
+    "watchDays": 7,
+    "minEvents": 20,
+    "noSignalExtends": 1
+  }
+}

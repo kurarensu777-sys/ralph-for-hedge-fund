@@ -1,0 +1,35 @@
+node_modules/
+dist/
+.vite/
+*.log
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+
+# credential material
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_rsa.*
+
+# data never lives in a repo
+*.parquet
+*.duckdb
+*.sqlite
+*.pkl
+
+# machine-local state
+.venv/
+.worktrees/
+.read-spool/
+.claude/settings.local.json
+
+# merge debris and OS junk
+*.orig
+*.rej
+.DS_Store
+Thumbs.db

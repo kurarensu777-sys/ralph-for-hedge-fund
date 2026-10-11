@@ -1,0 +1,50 @@
+/* DRAWERS - the shared detail-drawer layout (src/rooms/drawers/index.tsx). Additive only: the shell's
+   .drawer / .drawer-head stay as styles.css draws them; a head carrying a DrawerHead grows to fit
+   and its plain title gives way. The square, the chips (pill.out), the cards and the section caps
+   are the kit's. */
+.drawer-slot { display: contents }
+.drawer-head:has(.drawers-dh) { height: auto; min-height: 40px; padding-top: 10px; padding-bottom: 10px }
+.drawer-head:has(.drawers-dh) .drawer-title { display: none }
+
+.drawers-dh { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--s5); flex-wrap: wrap; row-gap: var(--s4) }
+.drawers-dh-t { flex: 1 1 160px; min-width: 0 }
+.drawers-dh-title { font: 600 var(--fs-lg) var(--sans); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.drawers-dh-sub { font: 400 var(--fs-sm) var(--mono); color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px }
+.drawers-chips { display: flex; gap: var(--s3); flex-wrap: wrap; flex: none; max-width: 100% }
+.drawers-chip { height: 22px; background: var(--panel); border-color: var(--line2); align-items: baseline; line-height: 20px }
+.drawers-chip .v { font-size: var(--fs-sm) }
+.drawers-none { padding: 6px 0 12px }
+
+/* key/value cards: two columns, one when the drawer is narrow */
+.drawers-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--s5); margin-bottom: 14px }
+.drawers-card { padding: 9px 12px }
+.drawers-card.wide { grid-column: 1 / -1 }
+.drawers-card-t { margin-bottom: 7px }
+.drawers-kv { margin: 0; display: grid; gap: 5px }
+.drawers-kv-r { display: grid; grid-template-columns: 78px 1fr; gap: var(--s4); align-items: start; min-width: 0 }
+.drawers-kv dt, .drawers-kv dd { line-height: 18px }
+.drawers-kv dt { font: 400 var(--fs-sm) var(--mono); color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.drawers-kv dd { margin: 0; font-size: var(--fs-md); min-width: 0; overflow-wrap: anywhere }
+/* a long path or link inside a value wraps inside its card, never past it */
+.drawers-kv dd button, .drawers-kv dd a { max-width: 100%; white-space: normal; overflow-wrap: anywhere; text-align: left }
+
+/* metric tiles */
+.drawers-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: var(--s4); margin-bottom: 14px }
+.drawers-tile { padding: 8px 10px 7px }
+.drawers-tile-v { font: 600 var(--fs-xl) var(--mono); color: var(--text); line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.drawers-tile-k { font: 400 var(--fs-xs)/1.3 var(--mono); color: var(--faint); margin-top: 3px; text-transform: uppercase; letter-spacing: .04em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere }
+
+/* reads timeline: run -> +7d -> +30d on one rule */
+.drawers-tl { display: flex; align-items: flex-start; margin: 4px 0 14px; max-width: 420px }
+.drawers-tl-n { flex: 1; display: flex; flex-direction: column; align-items: center; gap: var(--s2); position: relative; min-width: 0 }
+.drawers-tl-n + .drawers-tl-n::before { content: ""; position: absolute; top: 5px; right: 50%; width: 100%; height: 1px; background: var(--line2) }
+.drawers-tl-d { width: 11px; height: 11px; border-radius: 50%; position: relative; z-index: 1; box-sizing: border-box; background: var(--bg2) }
+.drawers-tl-d.run { background: var(--dim) }
+.drawers-tl-d.read { background: var(--ok) }
+.drawers-tl-d.due { border: 2px solid var(--warn) }
+.drawers-tl-d.missed { background: var(--fail) }
+.drawers-tl-d.off { border: 1px dashed var(--off) }
+.drawers-tl-a { font: 600 var(--fs-xs) var(--mono); color: var(--faint) }
+.drawers-tl-l { font: 400 var(--fs-sm) var(--mono); color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100% }
+
+.drawers-sec { margin: 4px 0 var(--s4) }

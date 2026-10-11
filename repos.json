@@ -1,0 +1,18 @@
+{
+  "$comment": "Every git repo the cockpit manages; path is fund-relative. This is ONE repo: the fund root holds the law (CLAUDE.md, README.md, repos.json, .claude/, start.bat, stop.bat), and app/, database/ and platform/ are plain folders in it, not repos of their own. It carries no remote: `git remote get-url origin` names yours once you add one. `verify` is ONE command run by cmd.exe from the repo (or its build worktree): only its leading interpreter is resolved, so it cannot chain a second relative path. `build: true` = the cockpit may cut build branches (a worktree per conversation under ~/fund-data/worktrees/<id>/) and land them through its queue; a `guarded` repo is never built or landed from the cockpit. `setup` is what app/tools/clone.py runs from the repo on a new machine, in file order, after the venv exists: each step an argv run from the repo, `{python}` = the fund venv's interpreter (<fund>/.venv). `needs` names a repo whose setup must have succeeded first; one repo needs none.",
+  "repos": [
+    {
+      "id": "fund",
+      "path": ".",
+      "holds": "the law at the root (CLAUDE.md, README.md, repos.json, .claude/, start.bat, stop.bat); database/ (the one data layer: the Postgres ops store, its migrations, fund_db for python and @fund/db for node); app/ (the cockpit, the roster, the board, the loop, the tools and the library); platform/ (research checks and the lab desks). The data itself lives in ~/fund-data, never here",
+      "verify": "npm --prefix app run verify",
+      "build": true,
+      "setup": [
+        ["{python}", "-m", "pip", "install", "-e", "./database[test]"],
+        ["{python}", "-m", "pip", "install", "-e", "./platform"],
+        ["npm", "install", "--prefix", "database/node"],
+        ["npm", "install", "--prefix", "app"]
+      ]
+    }
+  ]
+}

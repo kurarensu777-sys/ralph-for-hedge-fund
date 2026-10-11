@@ -1,0 +1,7 @@
+* text=auto eol=lf
+*.png binary
+
+# The loop's records and the desk ledgers the tools write are append-only event logs: two hands
+# appending at EOF are BOTH right, so union keeps both rows (the fund repo's rule, carried here with
+# app/loop/records on 2026-09-25). Every reader of a .jsonl here is order-insensitive.
+*.jsonl merge=union

@@ -1,0 +1,38 @@
+# Merge behaviour by file TYPE - the mechanical half of the conflict ladder (CLAUDE.md).
+# Everything git can resolve without judgement is resolved here, so an agent only ever sees a
+# conflict that genuinely needs a decision.
+
+# The desk ledgers are append-only event logs: two hands appending at EOF are BOTH right, and a
+# plain rebase would conflict on every concurrent append. Union keeps both rows. Safe because
+# every reader of a .jsonl here is order-insensitive - `data/runs.jsonl` is keyed by run id,
+# `data/snapshots.jsonl` by (ts, subject, field), the read-ledger takes the newest row per path -
+# so a union merge can add a duplicate but can never produce a wrong answer. A duplicate run id
+# is a visible defect; a silently dropped run is not.
+*.jsonl merge=union
+
+# Scripts are POSIX and are run by bash on Windows machines too: a CRLF checkout breaks the
+# shebang line. Windows defaults to autocrlf=true, which would otherwise mangle them.
+*.sh  text eol=lf
+*.py  text eol=lf
+
+# Everything an agent reads or writes is LF, on every machine. Mixed endings turn a one-word
+# edit into a whole-file diff, and a whole-file diff cannot be reviewed.
+*.md   text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+*.yml  text eol=lf
+
+# Rendered and captured artifacts get NO driver on purpose. A collision must surface as a real
+# conflict and go to the owner - a chart or a screenshot is nobody's to overwrite.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.webp binary
+*.gif  binary
+*.pdf  binary
+*.mp4  binary
+*.parquet binary
+*.ipynb  -diff
+fund text eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf

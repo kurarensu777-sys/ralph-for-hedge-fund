@@ -1,0 +1,16 @@
+{
+  "$comment": "The caps on what an agent loads, in tokens (chars / 4, the estimate server/chat/law.ts uses). ONE source: app/tools/context.py reads it for the check, the cockpit reads it for the Library's boot meter and the Context room. A cap changes here, with the owner's word, and nowhere else. The boot is 40% of the 1,000,000-token context circle (window x share); base + agent + boot + the longest workspace chain sum to it. `workspaceNamed` gives one CLAUDE.md its own cap; `screen` is the cap of a dashboard's runbook (platform/dashboards/<id>/CLAUDE.md). Types and the why: app/library/law/how-we-work.md#who-writes-where.",
+  "window": 1000000,
+  "share": 0.4,
+  "base": 6000,
+  "agent": 2000,
+  "boot": 375000,
+  "chapter": 4500,
+  "chapterTarget": 3750,
+  "book": 40000,
+  "workspace": 8000,
+  "screen": 3000,
+  "workspaceNamed": {
+    "platform/CLAUDE.md": 6000
+  }
+}

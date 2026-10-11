@@ -1,0 +1,37 @@
+# Data never lives in this repo: the cluster, the binaries and the lake sit in ~/fund-data/db/.
+pgdata/
+pgsql/
+*.parquet
+*.duckdb
+*.duckdb.wal
+# Secrets: none exist here (Postgres is trust-auth on 127.0.0.1 only); fail closed anyway.
+.env
+.env.*
+*.pem
+*.key
+# Build and dependency output.
+node_modules/
+dist/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.venv/
+# Credential material and machine-local state: fail closed (B-0632).
+*.p12
+*.pfx
+id_rsa
+id_rsa.*
+# Local state, worktrees and the read-ledger spool.
+.claude/settings.local.json
+.worktrees/
+.read-spool/
+# Merge debris and OS junk.
+*.orig
+*.rej
+.DS_Store
+Thumbs.db
+# Data and logs never land here.
+*.pkl
+*.sqlite
+*.log

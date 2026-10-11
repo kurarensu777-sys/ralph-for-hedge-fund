@@ -1,0 +1,25 @@
+#!/bin/sh
+# fund guard (pre-push): installed by fundd as core.hooksPath in every repo. main's history is only
+# ever fast-forwarded: this refuses a push that would rewrite refs/heads/main (not a fast-forward of
+# what the remote holds) or delete it. GitHub branch protection is off (it needs Pro on private
+# repos) and the deny list is a pattern match, so this is the rail that holds whatever the spelling.
+# Plain sh + git, no node: it must hold on a machine where node is missing too.
+z40=0000000000000000000000000000000000000000
+bad=0
+while read -r lref lsha rref rsha; do
+  [ "$rref" = "refs/heads/main" ] || continue
+  case "$lsha" in
+    "$z40"|0000000000000000000000000000000000000000000000000000000000000000)
+      echo "fund guard: refused - this push deletes main on the remote" >&2; bad=1; continue ;;
+  esac
+  case "$rsha" in
+    "$z40"|0000000000000000000000000000000000000000000000000000000000000000) continue ;;
+  esac
+  if ! git cat-file -e "$rsha^{commit}" 2>/dev/null; then
+    echo "fund guard: refused - the remote main ($rsha) is not in this clone; fetch first, then rebase onto it" >&2; bad=1; continue
+  fi
+  if ! git merge-base --is-ancestor "$rsha" "$lsha"; then
+    echo "fund guard: refused - this push rewrites main (remote $rsha is not an ancestor of $lsha). Only fast-forwards reach main." >&2; bad=1
+  fi
+done
+exit $bad

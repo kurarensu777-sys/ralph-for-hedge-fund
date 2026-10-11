@@ -1,0 +1,243 @@
+/* ROOM: system. Layout and the room's own charts only: tables, key/value, meters, switches, code,
+   pills and states are the kit's (src/styles.css). */
+.system-main { padding: var(--s5) var(--gutter) 40px }
+.system-h { margin: 6px 0 }
+.system-h ~ .system-h { margin-top: 22px }
+.system-h-row { display: flex; align-items: center; gap: var(--s4) }
+.system-h-r { display: inline-flex; align-items: center; gap: 5px; margin-left: 4px; font: 600 var(--fs-sm) var(--mono); letter-spacing: 0; text-transform: none; color: var(--text) }
+.system-rd { max-width: 0; width: 100%; min-width: 120px; overflow: hidden; text-overflow: ellipsis; color: var(--dim) }
+.system-own { max-width: 150px; overflow: hidden; text-overflow: ellipsis }
+.system-last { cursor: pointer }
+.system-act { width: 64px; text-align: right }
+.system-busy { font: var(--fs-xs) var(--mono); color: var(--accent); display: inline-flex; gap: var(--s3); align-items: center }
+.system-run { margin-bottom: var(--s4) }
+.system-err { font-size: var(--fs-sm) }
+.tbl.system-fit { width: 100%; max-width: 980px }
+.system-nodot { width: 7px; flex: none }
+.system-dayb td { border-top: 1px solid var(--line2) }
+/* the STOP switch is on: one amber banner over the schedule */
+.system-stop { display: flex; align-items: center; gap: var(--s5); border: 1px solid #e8b45a66; background: #e8b45a14; border-radius: var(--r); padding: 8px 10px 8px 12px; margin-bottom: var(--s6); font-size: var(--fs-md) }
+.system-stop-t { font: 600 var(--fs-sm) var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--warn) }
+/* a view's name never gives way to its reading: the reading truncates (full text in its tooltip) */
+.system-view .nm { flex: none }
+.system-view .r { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: right }
+.system-age { display: inline-flex; align-items: center; gap: var(--s4) }
+.system-cred { width: 60px; text-align: center }
+.system-ob { display: inline-flex }
+.system-missed { display: inline-flex; align-items: center; gap: var(--s3); color: var(--warn); font-family: var(--mono) }
+.system-pd { display: flex; align-items: center; gap: var(--s4); margin-top: var(--s5); min-width: 0 }
+.system-cmd { min-width: 0 }
+
+/* ops: spend chart, backups, remote */
+.system-chart { max-width: 980px; margin-bottom: 6px }
+.system-legend { display: grid; justify-content: start; gap: var(--s2) var(--s7); font: var(--fs-sm) var(--mono); color: var(--dim); margin-bottom: 6px }
+.system-lg { display: inline-flex; align-items: center; gap: var(--s3) }
+.system-lg i, .system-tip-r i, .system-sw { width: 8px; height: 8px; border-radius: 2px; display: inline-block; flex: none }
+.system-sw { margin-right: 7px; vertical-align: 0 }
+.system-lg b { font-weight: 500; color: var(--text) }
+.system-plot { position: relative; display: flex; gap: var(--s6); align-items: flex-start }
+.system-plot svg { flex: 1; min-width: 0; height: auto; display: block }
+.system-grid { stroke: var(--line); stroke-width: 1 }
+.system-axis { stroke: var(--line2); stroke-width: 1 }
+.system-zero { stroke: var(--line2); stroke-width: 1 }
+.system-tick { fill: var(--faint); font: var(--fs-xs) var(--mono) }
+.system-hit { fill: transparent }
+.system-hit.on { fill: #ffffff08 }
+.system-tip { position: absolute; top: 4px; pointer-events: none; z-index: 2; width: 190px; flex: none; font-size: var(--fs-sm); border: 1px solid var(--line); border-radius: var(--r); padding: 7px 9px; background: var(--panel); box-shadow: 0 10px 30px #0009 }
+.system-tip > .mono { color: var(--dim); margin-bottom: 4px; font-size: var(--fs-sm) }
+.system-tip-r { display: flex; align-items: center; gap: 7px; line-height: 1.7 }
+.system-tip-r span { flex: 1; font-family: var(--mono); color: var(--dim); overflow: hidden; text-overflow: ellipsis }
+.system-tip-r b { font: 500 var(--fs-sm) var(--mono); font-variant-numeric: tabular-nums }
+.system-tip-t { border-top: 1px solid var(--line); margin-top: 3px; padding-top: 2px }
+.system-tip-t i { background: none }
+.system-use { width: 110px }
+.system-tot td { border-top: 1px solid var(--line2) }
+.system-ops-bar { display: flex; align-items: center; gap: var(--s6); margin-bottom: var(--s5); font-size: var(--fs-sm) }
+/* one colour for an agent's name in every spend table and the legend */
+.system-agent { color: var(--text); font: var(--fs-md) var(--mono) }
+.system-lg .system-agent { font-size: var(--fs-sm) }
+.system-capc { display: inline-flex; align-items: center; gap: var(--s3) }
+.system-lock { display: inline-flex; width: 16px; height: 16px; align-items: center; justify-content: center; padding: 0; border: 0; background: none; color: inherit }
+button.system-lock { cursor: pointer; border-radius: var(--r-xs) } button.system-lock:hover { background: var(--panel3) }
+.system-bell { display: inline-flex; cursor: default }
+
+/* alerts: the rules table, the send log, the new-rule form */
+.system-cond { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap }
+.system-cond .ico { color: var(--accent) }
+.system-alt { margin-left: 6px; display: inline-flex; vertical-align: middle }
+.tbl.system-rules { width: 100% }
+.system-rules td, .system-rules th { padding-right: 18px }
+.system-alog { display: flex; flex-direction: column; font-size: var(--fs-sm); width: 100%; max-width: 980px }
+.system-aline { display: grid; grid-template-columns: 12px 16px minmax(90px, 1fr) 110px 150px; align-items: center; gap: var(--s4); padding: 3px 6px; border-bottom: 1px solid var(--line) }
+.system-aline:hover { background: var(--panel2) }
+.system-aline > :last-child { text-align: right }
+.system-asub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.system-form { display: flex; flex-direction: column; gap: var(--s5) }
+.system-form > label { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: var(--s5) }
+.system-form > label > span:first-child { font: 600 var(--fs-cap) var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint) }
+.system-form > label > .seg, .system-form > label > input[type=datetime-local] { justify-self: start }
+.system-form-r { display: flex; align-items: center; gap: var(--s4) }
+.system-form-f { display: flex; align-items: center; gap: var(--s4); margin-top: 4px }
+
+/* the cadence wall (Schedule > Wall) */
+.system-wall { position: relative; display: flex; align-items: flex-start; user-select: none; max-width: 1600px }
+.system-wl-labels { flex: none; display: flex; flex-direction: column }
+.system-wl-g { display: flex; align-items: center; gap: var(--s3); font: 600 var(--fs-cap) var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); border-top: 1px solid var(--line) }
+.system-wl-l { display: flex; align-items: center; gap: var(--s3); font-size: var(--fs-sm); color: var(--dim); padding-left: 20px; cursor: pointer; overflow: hidden; white-space: nowrap }
+.system-wl-l .mono { overflow: hidden; text-overflow: ellipsis }
+.system-wl-l:hover { color: var(--text) }
+.system-wl-l.off { opacity: .5 }
+.system-wl-bad { font: 500 var(--fs-cap) var(--mono); font-style: normal; color: var(--fail) }
+.system-wl-svg { flex: none; display: block; cursor: grab; overflow: hidden }
+.system-wl-svg:active { cursor: grabbing }
+.system-wl-lane { fill: transparent; cursor: pointer }
+.system-wl-lane:hover { fill: #ffffff06 }
+.system-wl-sep { stroke: var(--line) }
+.system-wl-grid { stroke: var(--line); stroke-width: 1 } .system-wl-grid.major { stroke: var(--line2) }
+.system-wl-hatch { stroke: var(--line); stroke-width: 1 }
+.system-wl-run { cursor: pointer } .system-wl-run.manual { opacity: .55 }
+.system-wl-run.pulse { animation: system-wl-pulse 1.6s ease-in-out infinite }
+@keyframes system-wl-pulse { 50% { opacity: .45 } }
+.system-wl-owed { fill: none; stroke: var(--faint); stroke-width: 1; cursor: pointer }
+.system-wl-owed.open { stroke: var(--dim); stroke-width: 1.5 }
+.system-wl-miss { stroke: var(--fail); stroke-width: 2; stroke-linecap: round }
+.system-wl-skip { stroke: var(--faint); stroke-width: 1.5; stroke-linecap: round }
+.system-wl-hit { fill: transparent; cursor: pointer }
+.system-wl-now line { stroke: var(--accent); stroke-width: 1 }
+.system-wl-nowt { fill: var(--accent); font: 600 var(--fs-cap) var(--mono); letter-spacing: .08em; text-transform: uppercase }
+.system-wl-tip { position: absolute; z-index: 3; pointer-events: none; width: 220px; font-size: var(--fs-sm); border: 1px solid var(--line); border-radius: var(--r); padding: 6px 9px; background: var(--panel); box-shadow: 0 10px 30px #0009 }
+.system-wl-tip > .mono:first-child { color: var(--text); font-size: var(--fs-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.system-wl-tr { display: flex; align-items: center; gap: 7px }
+.system-wl-tr i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; flex: none; box-sizing: border-box }
+.system-wl-tr b { font: 500 var(--fs-sm) var(--mono) }
+.system-wl-td { color: var(--dim); font-size: var(--fs-sm); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical }
+
+/* ---- Health: one kit card group per owner category, its header a row of the same fixed column
+   grid as the probe rows, so the category's merged 24h strip sits on the probes' own heat column.
+   The column labels are one header table above the cards (src/rooms/system/heat.tsx) ---- */
+.system-heat-th, .system-heat-td { white-space: nowrap }
+/* an agent's name wears its category glyph, as every other agent table does */
+.system-agentc { display: inline-flex; align-items: center; gap: var(--s4); white-space: nowrap }
+.system-jobbrain { display: inline-flex; align-items: center; gap: var(--s4); white-space: nowrap }
+/* labelled counts ("fail 1 · missed 1") stay on one line; the total rides in the tooltip */
+.system-chips { flex-wrap: nowrap; white-space: nowrap; overflow: hidden }
+.system-rs { display: inline-flex; align-items: center; gap: var(--s3); border: 0; background: none; padding: 0 4px; color: var(--dim); font: var(--fs-sm) var(--mono); cursor: pointer }
+.system-rs:hover { color: var(--text) }
+.system-health { --hc: clamp(8px, .7vw, 14px); max-width: 1180px; display: flex; flex-direction: column; gap: var(--s4) }
+.system-health .tbl.system-tbl { table-layout: fixed; width: 100% }
+.system-c-dot { width: 40px } .system-c-id { width: clamp(160px, 11vw, 210px) } .system-c-n { width: 58px }
+.system-c-heat { width: calc(24 * var(--hc) + 69px + 20px) }
+.system-hcols th { position: static; padding-block: 2px 4px; border-bottom: 0 }
+.system-health .cg { margin: 0 }
+.system-hc td.system-edge { padding-left: 16px; box-shadow: none }
+.system-id { overflow: hidden; text-overflow: ellipsis }
+.system-hc > .tbl > tbody > tr:last-child > td { border-bottom: 0 }
+.system-hc > .tbl > tbody > tr:first-child > td { border-top: 1px solid var(--line) }
+.system-hc-h > td { padding-block: 9px; border-bottom: 0; overflow: hidden }
+.system-hc-h > td:first-child { padding-left: 10px }
+/* the option-B header wash (.cg-h's), across the whole header row */
+.system-hc-h { background: linear-gradient(90deg, color-mix(in srgb, var(--c) 14%, transparent), transparent 72%) }
+.system-hc-h.click { cursor: pointer; user-select: none }
+.system-hc-h.click:hover { background: linear-gradient(90deg, color-mix(in srgb, var(--c) 22%, transparent), transparent 80%) }
+/* the right slot, as the Dashboards card: live dot, the .cg-n pill, the chevron at the edge */
+.system-hc-r { display: flex; justify-content: flex-end; padding-right: 2px }
+.system-hc-n { border: 0; font: 600 var(--fs-xs) var(--mono); color: var(--dim); font-variant-numeric: tabular-nums; cursor: pointer; white-space: nowrap }
+.system-hc-n:disabled { cursor: default }
+.system-hc-n:focus-visible { outline: 1px solid var(--line2) }
+.system-hc-chev { transform: rotate(-90deg) }
+.system-hc-chev.open { transform: none }
+.system-hc-chev.none { visibility: hidden }
+/* the 24h column header carries the shared four-swatch key (.heat-key in styles.css), right-aligned */
+.system-heat-th .system-hk-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s4) }
+/* at wide windows the table is capped and centred */
+@media (min-width: 1800px) { .system-health { margin-inline: auto; width: 100% } }
+
+/* ---- the summary TILES a view opens with (tiles.tsx): a figure, a one or two word key ---- */
+.system-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--tmin, 120px), 1fr)); gap: var(--s4); margin-bottom: var(--s6); max-width: 1180px }
+.system-tile { display: flex; flex-direction: column; gap: 3px; padding: 8px 11px 7px; min-width: 0; text-align: left; font: inherit; color: inherit }
+.system-tile.edge { box-shadow: inset 3px 0 0 var(--c) }
+.system-tile.click { cursor: pointer } .system-tile.click:hover { border-color: var(--line2) } .system-tile.on { border-color: var(--accent-line) }
+.system-tile-v { display: flex; align-items: center; gap: var(--s4); font: 600 var(--fs-xl) var(--mono); color: var(--text); line-height: 1.2; font-variant-numeric: tabular-nums; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis }
+.system-tile-v.unk { color: var(--faint) }
+.system-tile-v .glyph { flex: none }
+.system-tile-v .meter { flex: 1; min-width: 40px; width: auto }
+.system-tile-v small { font: 500 var(--fs-sm) var(--mono); color: var(--faint) }
+.system-tile-k { display: flex; align-items: center; gap: var(--s3); font: 600 var(--fs-cap) var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); white-space: nowrap; overflow: hidden }
+/* a reading's figure beside its chips */
+.system-rv { font: var(--fs-sm) var(--mono); color: var(--dim); margin-left: 2px }
+.system-tile-n { margin-left: auto; font: 600 var(--fs-xs) var(--mono); color: var(--dim); letter-spacing: 0 }
+
+/* ---- Spend: today per agent as bars on one scale (spend.tsx); solid = the cockpit's, pale = every session ---- */
+.system-bars { display: flex; flex-direction: column; gap: 3px; max-width: 980px; margin-bottom: 4px }
+.system-bar { display: grid; grid-template-columns: minmax(120px, 190px) 1fr 64px auto; align-items: center; gap: var(--s5); padding: 2px 4px; border-radius: var(--r-sm) }
+.system-bar:hover { background: var(--panel2) }
+.system-bar .system-sw { background: var(--c) }
+.system-bar-n { font: var(--fs-md) var(--mono); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.system-bar-t { position: relative; height: 10px; border-radius: 3px; background: var(--panel2) }
+.system-bar-t i { position: absolute; left: 0; top: 0; bottom: 0; min-width: 2px; border-radius: 3px }
+.system-bar-t i.all { background: color-mix(in srgb, var(--c) 32%, transparent) }
+.system-bar-t i.own { background: var(--c) }
+.system-bar > b { font: 600 var(--fs-sm) var(--mono); text-align: right; font-variant-numeric: tabular-nums }
+.system-bar.quiet { grid-template-columns: 1fr; cursor: default }
+.system-bar.quiet:hover { background: none }
+.system-bar-cap { display: inline-flex; width: 110px }
+/* a folded section's header is a button that looks like the other caps */
+button.system-fold { display: flex; background: none; border: 0; padding: 0; cursor: pointer; color: var(--faint); width: 100%; text-align: left }
+button.system-fold:hover { color: var(--dim) }
+.system-fold .cg-chev { width: 14px; height: 14px }
+.system-fold-shut { transform: rotate(-90deg) }
+
+/* ---- Agents: the roster as cards (agents.tsx) ---- */
+.system-agrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: var(--s4); max-width: 1180px }
+.system-ac { display: flex; flex-direction: column; gap: 7px; padding: 9px 11px 8px 13px; box-shadow: inset 3px 0 0 var(--c); min-width: 0 }
+.system-ac.dormant { opacity: .62 }
+.system-ac-h { display: flex; align-items: center; gap: var(--s4); min-width: 0 }
+.system-ac-t { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25 }
+.system-ac-nm { font: 600 var(--fs-md) var(--sans); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.system-ac-pick { display: flex; align-items: center; gap: var(--s2); min-width: 0; padding: 3px 4px; border-radius: var(--r-sm); background: var(--panel2) }
+.system-ac-m { flex: 1; min-width: 0; display: flex } .system-ac-e { flex: none; display: flex }
+.system-ac-pick select { min-width: 0; max-width: 100% }
+.system-ac-sep { width: 1px; align-self: stretch; margin: 2px var(--s2); background: var(--line2); flex: none }
+.system-ac-f { display: flex; align-items: center; gap: var(--s3); min-width: 0 }
+.system-ac-cwd { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-xs) }
+.system-ac-f .pill .ico { width: 11px; height: 11px }
+
+/* ---- Connectors: the doors as cards (connectors.tsx) ---- */
+.system-dgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: var(--s4); max-width: 1180px }
+.system-door { display: flex; flex-direction: column; justify-content: space-between; gap: 8px; padding: 9px 11px 8px; text-align: left; font: inherit; color: inherit; cursor: pointer; min-height: 68px }
+.system-door:hover { border-color: var(--line2) }
+.system-door.human { box-shadow: inset 3px 0 0 color-mix(in srgb, var(--fail) 70%, transparent) }
+.system-door.parked { opacity: .7 }
+.system-door-nm { font: 600 var(--fs-md) var(--sans); color: var(--text); line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical }
+.system-door-f { display: flex; align-items: center; gap: var(--s3); min-width: 0 }
+.system-door-f .pill .ico { width: 11px; height: 11px }
+.system-door-sc { font-size: var(--fs-xs) }
+
+/* ---- Remote: one compact card per repo (ops.tsx) ---- */
+.system-rgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: var(--s4); max-width: 1180px }
+.system-rc { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; min-width: 0 }
+.system-rc.click { cursor: pointer } .system-rc.click:hover { border-color: var(--line2) }
+.system-rc.blocked { opacity: .55 }
+.system-rc-h { display: flex; align-items: center; gap: var(--s4); min-height: 24px }
+.system-rc-nm { font-size: var(--fs-md); color: var(--text) }
+.system-rc-f { display: flex; align-items: center; gap: var(--s4); font-size: var(--fs-sm) }
+.system-rc-m { display: inline-flex; align-items: center; gap: var(--s3) }
+.system-rc-err { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0 }
+/* the orphan readings: one dim line under the cards (orphans.ts), never a row */
+.system-orphans { margin-top: var(--s5); padding: 0 var(--s4); font: var(--fs-xs) var(--mono); cursor: help; width: fit-content }
+/* Controls: one master strip and five rows */
+.system-ctl-master { display: flex; align-items: center; gap: var(--s5); max-width: 760px; margin: 0 auto var(--s6); padding: 12px 16px; border: 1px solid var(--line2); border-radius: var(--r); background: var(--panel) }
+.system-ctl-master.paused { border-color: #e8b45a66; background: #e8b45a14 }
+.system-ctl-mt { display: flex; flex-direction: column; font: 600 var(--fs-lg) var(--sans); gap: 1px }
+.system-ctl-mt .faint, .system-ctl-nm .faint { font: 400 var(--fs-sm) var(--sans) }
+.system-ctl-list { max-width: 760px; margin: 0 auto; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel) }
+.system-ctl-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) 96px 300px; gap: var(--s6); align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line) }
+.system-ctl-row:last-child { border-bottom: 0 }
+.system-ctl-nm { display: flex; flex-direction: column; font-weight: 600; min-width: 0 }
+.system-ctl-chip { display: inline-flex }
+.system-ctl-ctl { display: inline-flex; align-items: center; gap: var(--s4); justify-content: flex-end; white-space: nowrap }
+.system-ctl-master .system-ctl-sel { width: auto; min-width: 120px; padding: 2px 6px; height: 24px; font: var(--fs-sm) var(--mono) }
+.system-ctl-ctl .system-ctl-sel { width: auto; min-width: 120px; padding: 2px 6px; height: 24px; font: var(--fs-sm) var(--mono) }
+.system-ctl-ctl .system-ctl-num { width: 44px; padding: 2px 6px; height: 24px; text-align: right; font: var(--fs-sm) var(--mono) }
+.system-ctl-ctl .system-ctl-num.wide { width: 84px }
+.system-ctl-foot { max-width: 760px; margin: var(--s5) auto 0; font-size: var(--fs-sm) }

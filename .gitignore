@@ -1,0 +1,70 @@
+# ---- SECRETS - the leak class, and the one this file exists for ----
+# `.env` alone matches ONLY a file named exactly that. The glob closes the whole family
+# (.env.local, .env.production, whatever a tool writes next). No .env file of any kind is
+# tracked here (.env.example was retired 2026-09-25): a keyed connector reads its
+# key from the operator's machine. The data layer has no password anywhere (Postgres is trust-auth
+# on 127.0.0.1 only), so nothing of it belongs here either.
+.env
+.env.*
+
+# Credential material never enters this tree. Venue and broker keys live in the operator's
+# machine config, never here - and trading keys never enter an agent's environment at all
+# (the constitution's key law).
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_rsa.*
+*.keychain
+*.kdbx
+
+# ---- DATA - never in a repo (~/fund-data holds it); fail closed if a tool writes one here ----
+*.parquet
+*.duckdb
+*.duckdb.wal
+*.sqlite
+*.pkl
+*.log
+
+# ---- WORKTREES (the sync law) ----
+# Since c521c95 (2026-09-25) only the cockpit's build branches and worktrees exist, landed through
+# its land queue; everyone else works on main. Ignored so a worktree is never staged into this repo.
+.worktrees/
+
+# ---- LOCAL STATE (machine-local, never shared) ----
+.claude/settings.local.json
+**/.claude/settings.local.json
+.claude/launch.json
+# The read-ledger SPOOL never lives here by design (%LOCALAPPDATA%\fund\read-spool), but a
+# misconfigured AGENT run could point it at the tree. Fail closed.
+.read-spool/
+
+# ---- DEPENDENCIES + BUILD OUTPUT ----
+node_modules/
+dist/
+.vite/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# ---- OS + EDITOR JUNK ----
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ---- MERGE DEBRIS ----
+# The conflict ladder has hands rebasing over each other. A .orig left by a resolution is
+# noise that must never land in the record.
+*.orig
+*.rej
+
+# ---- THE VENV ----
+.venv/

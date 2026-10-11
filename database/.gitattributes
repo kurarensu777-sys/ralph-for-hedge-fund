@@ -1,0 +1,7 @@
+# Everything here is LF on every machine; binaries are never diffed or merged.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.parquet binary
+*.png binary
+*.zip binary

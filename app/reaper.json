@@ -1,0 +1,10 @@
+{
+  "$comment": "The idle-hand reaper (server/chat/reaper.ts, B-0420). A chat's agent process is closed when nothing of it runs (no turn, no decision waiting, no background work or wake-up) and it has been idle idleMinutes; sooner when free RAM is under pressureFreeGb (hands idle at least pressureMinIdleMinutes, pressureBatch a sweep, oldest first), and the least recently active go when more than maxIdleHands idle hands are open. No hand active within settleMinutes is closed for any reason: a subagent that has just finished is about to start a turn. The conversation stays: its next message reopens it. A missing or bad key takes its default; the file is read each sweep.",
+  "idleMinutes": 120,
+  "sweepSeconds": 60,
+  "pressureFreeGb": 3,
+  "pressureMinIdleMinutes": 10,
+  "pressureBatch": 4,
+  "maxIdleHands": 8,
+  "settleMinutes": 5
+}

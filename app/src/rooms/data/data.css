@@ -1,0 +1,26 @@
+/* ROOM: data - the storage view. Layout only; colours are the kit's states */
+
+.data-main { display: flex; flex-direction: column; gap: var(--s5); min-height: 100%; }
+/* the cache's budget line: the meter takes the rest of the row */
+.data-budget { display: flex; align-items: center; gap: var(--s4); font-size: var(--fs-sm) }
+.data-budget .meter { height: 8px }
+.data-bar { display: flex; align-items: center; gap: var(--s4); flex-wrap: wrap }
+.data-bar .sp { flex: 1 }
+.data-bar .data-search { width: 160px }
+.data-bar .data-select { width: 170px }
+.input.bad { border-color: var(--fail-line) }
+
+/* plans */
+.data-plan, .data-ret { display: flex; flex-direction: column; gap: var(--s5) }
+.data-refused { display: flex; align-items: baseline; gap: var(--s3); color: var(--fail); font-size: var(--fs-sm) }
+.data-refused b { color: var(--text) }
+.data-scroll { max-height: 280px; overflow: auto; border: 1px solid var(--line); border-radius: var(--r-sm) }
+.data-scroll.tall { max-height: none; border: 0 }
+.data-tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm) }
+.data-tbl th { position: sticky; top: 0; background: var(--panel); text-align: left; font: 600 var(--fs-cap) var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); padding: var(--s3) var(--s4); border-bottom: 1px solid var(--line) }
+.data-tbl td { padding: var(--s2) var(--s4); border-bottom: 1px solid var(--line); white-space: nowrap }
+.data-tbl td.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums }
+.data-tbl td.clip { max-width: 240px; overflow: hidden; text-overflow: ellipsis }
+.data-confirm { display: flex; align-items: center; gap: var(--s4); flex-wrap: wrap }
+.data-confirm .input { flex: 1; min-width: 180px }
+.data-phrase { font: 600 var(--fs-sm) var(--mono); color: var(--text); background: var(--code); border: 1px solid var(--line2); border-radius: var(--r-sm); padding: 2px 6px; user-select: all }

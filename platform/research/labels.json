@@ -1,0 +1,3 @@
+{
+  "$comment": "Research-room labels per study, keyed studies/<file>.ipynb: markets = one or more of crypto, equities, rates, predmkts, the main one first; format = exactly one of carry, directional, short_vol, rel_value, evidence; style (optional) = systematic or discretionary. A study's own manifest (profile.markets, format, tags.style) wins over this file, and the two must agree while both exist. Held by research/check_labels.py."
+}

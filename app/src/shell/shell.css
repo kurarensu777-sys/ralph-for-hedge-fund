@@ -1,0 +1,116 @@
+/* the shell's own additive styles: the status bar's island row and the rail's quiet cards.
+   Tokens only from styles.css; nothing here overrides a room. */
+
+/* ---- status bar: a slim row of island chips ---- */
+.sb { gap: 6px; padding: 0 8px }
+.sb-chip { display: inline-flex; align-items: center; gap: 6px; height: 18px; padding: 0 9px; border-radius: 99px; background: var(--panel); border: 1px solid var(--line); color: var(--faint); font: inherit; white-space: nowrap; flex: none }
+button.sb-chip { cursor: pointer }
+button.sb-chip:hover { border-color: var(--line2); background: var(--panel2) }
+.sb-chip b { color: var(--dim); font-weight: 500 }
+.sb-chip b.fail { color: var(--fail) }
+.sb-chip.warn { border-color: #e8b45a44 } .sb-chip.warn b { color: var(--warn) }
+.sb-chip .dot { margin: 0 }
+.sb-num { color: var(--text) }
+.sb-ring { width: 12px; height: 12px; flex: none; transform: rotate(-90deg) }
+.sb-ring circle { fill: none; stroke: var(--line2); stroke-width: 2 }
+.sb-ring circle.on { stroke: var(--accent); stroke-linecap: round }
+.sb-spark { width: 36px; height: 12px; flex: none }
+.sb-spark polyline { fill: none; stroke: var(--accent); stroke-width: 1.3; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke }
+.sb-stop { height: 18px; border-radius: 99px; padding: 0 10px }
+
+@media (min-width: 1800px) {
+  .sb-chip, .sb-stop { height: 21px }
+  .sb-ring { width: 14px; height: 14px }
+  .sb-spark { width: 44px; height: 14px }
+}
+
+/* ---- rail: a card whose rows are all zero is its header only ---- */
+.rail-card.quiet .rail-nm { color: var(--dim); font-weight: 500 }
+/* rows hidden at zero: a dim +N after the visible count, so the chip matches what the card shows */
+/* the count pill holds ONE inline run ("2 rows +1"): never a second flex item that can wrap */
+.rail-n > span { display: inline; white-space: nowrap }
+.rail-hid { display: inline; font: 500 10px var(--mono); color: var(--faint); opacity: .7 }
+
+/* ---- rail card header: name + the owner count on one line, the state bar under it ---- */
+.rail-h { flex-wrap: wrap; row-gap: 6px; padding-bottom: 8px }
+.rail-owner { display: inline-grid; place-items: center; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 99px; font: 600 10px var(--mono); color: var(--bg) }
+.rail-owner.fail { background: var(--fail) }
+.rail-owner.ask { background: var(--ask) }
+.rail-bar, .rail-repos { display: flex; gap: 2px; flex: 0 0 100%; height: 4px; min-width: 0 }
+.rail-bar i { flex: 1 1 0; min-width: 3px; border-radius: 2px; background: var(--line2) }
+.rail-bar i.fail { background: var(--fail) }
+.rail-bar i.warn { background: var(--warn) }
+.rail-bar i.ask { background: var(--ask) }
+.rail-bar i.ok { background: var(--ok); opacity: .75 }
+.rail-bar i.grey { background: var(--off) }
+.rail-repos { gap: 8px; height: auto; align-items: center; padding-top: 1px }
+/* a repo square: 18px, its category colour as a wash + letters, a 6px sync dot on its corner */
+.rail-rq { position: relative; display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 5px; background: color-mix(in srgb, var(--c) 26%, transparent); border: 1px solid color-mix(in srgb, var(--c) 55%, transparent); color: var(--c); font: 600 8px var(--mono); letter-spacing: -.02em; line-height: 1; flex: none; cursor: default }
+.rail-rq i { position: absolute; top: -2px; right: -2px; width: 6px; height: 6px; border-radius: 50%; box-shadow: 0 0 0 1.5px var(--panel) }
+.rail-rq.sync i { background: var(--ok) }
+.rail-rq.behind i { background: var(--warn) }
+.rail-rq.conflict i { background: var(--fail) }
+.rail-rq.unknown i { background: var(--panel); border: 1px solid var(--faint) }
+/* the dashboards card's status row: a real rail row (dot, sans label, count pill on the right),
+   inset to line up with the card's own rows and not clickable on its own (the header folds) */
+.rail-stat { flex: 0 0 100%; margin: 0 -2px; padding: 3px 4px; cursor: inherit }
+.rail-stat:hover { background: none }
+/* the dashboards count in the sans face: the mono zero carries an inner mark that reads as an 8 at
+   chip size ("0/7" was read as "8/7", 2026-09-27) */
+.rail-stat .nchip { font: 600 var(--fs-xs) var(--sans) }
+.rail-card.quiet .rail-bar { opacity: .7 }
+@media (min-width: 1800px) {
+  .rail-owner { min-width: 18px; height: 18px; font-size: 11px }
+}
+
+/* ---- each column pinned to its own track: auto-placement slid .main into the side list's 0px
+   track whenever the list was folded and the rail too (a blank room, measured 2026-09-28) ---- */
+.shell > .ab { grid-column: 1 }
+.shell > .ex { grid-column: 2 }
+.shell > .main { grid-column: 3 }
+.shell > .rail { grid-column: 4 }
+
+/* ---- the side list's drag edge (src/ui/edge.tsx), on its right border ---- */
+.ex { position: relative }
+.ex-edge { position: absolute; top: 0; bottom: 0; right: 0; width: 6px; z-index: 5 }
+
+/* ---- focus (src/shell/focus.ts): the side list fills the window; the room's main is folded away ---- */
+.shell.focus-ex > .ex { grid-column: 2 / 4 }
+.shell.focus-ex .main { display: none }
+
+/* THE DOCK (Dock.tsx): the CEO board and Usage cards pinned under the scrolling services */
+.dock { flex: none; max-height: 48%; overflow: auto; border-top: 1px solid var(--line2); background: var(--bg2); padding: var(--s4) var(--s3); display: flex; flex-direction: column; gap: var(--s3) }
+.dock .rail-card { margin: 0; flex: none }
+.dock-ceo { border-color: var(--line3) }
+.dock-mk { display: inline-grid; place-items: center; width: 15px; height: 15px; margin-right: 6px; border: 1px solid var(--line3); border-radius: 4px; font: 600 7.5px var(--mono); color: var(--text); vertical-align: -3px }
+.dock-wait { color: var(--ask) !important; border-color: var(--ask-line); background: var(--ask-soft) }
+.dock-closed .rail-chev { transform: rotate(-90deg) }
+.dock-k { padding: 0 0 4px }
+.dock-row { display: flex; align-items: center; gap: var(--s4); width: 100%; padding: 4px 10px; border: 0; border-top: 1px solid var(--line); background: none; color: var(--dim); text-align: left; cursor: pointer; min-width: 0 }
+.dock-row:hover { background: var(--panel2) }
+.dock-row .lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text) }
+.dock-due { flex: none; font: var(--fs-xs) var(--mono); color: var(--faint) }
+.dock-due.today, .dock-due.soon { color: var(--warn) }
+.dock-due.late { color: var(--fail) }
+.dock-more { display: block; width: 100%; padding: 4px 10px; border: 0; border-top: 1px solid var(--line); background: none; color: var(--faint); text-align: left; font: var(--fs-xs) var(--mono); cursor: pointer }
+.dock-more:hover { color: var(--text); background: var(--panel2) }
+.dock-add { display: flex; align-items: center; gap: 4px; padding: 0 6px 6px }
+.dock-add .input { flex: 1; min-width: 0; height: 24px; padding: 2px 7px; font-size: var(--fs-sm); background: var(--bg) }
+select.bare.dock-pick { max-width: 74px; text-overflow: ellipsis }
+.dock-dn .lbl { color: var(--faint); text-decoration: line-through }
+.dock-bar-b { display: flex; gap: 4px; padding: 6px 6px 2px; border-top: 1px solid var(--line) }
+.dock-bar-b .btn { flex: 1; min-width: 0; justify-content: center; overflow: hidden; text-overflow: ellipsis }
+.dock-bar-b .btn:disabled { opacity: .5; cursor: default }
+.dock-u { padding: 0 0 6px }
+.dock-urow { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); padding: 3px 10px 0 }
+.dock-urow .rd { font: var(--fs-xs) var(--mono); color: var(--faint) }
+.dock-urow .rd b { color: var(--text); font-weight: 600 }
+.dock-top { padding-bottom: 2px; font: var(--fs-xs) var(--mono); color: var(--faint); justify-content: flex-start; gap: var(--s5) }
+.dock-bar { height: 5px; margin: 3px 10px 2px; border-radius: 3px; background: var(--line2); overflow: hidden }
+.dock-bar i { display: block; height: 100%; background: var(--ok); border-radius: 3px }
+.dock-bar.warn i { background: var(--warn) } .dock-bar.fail i { background: var(--fail) }
+/* an unmeasured window: a hatched, unfilled track, never a fill */
+.dock-bar.unk i { display: none }
+.dock-bar.unk { background: repeating-linear-gradient(135deg, var(--off) 0 4px, var(--line2) 4px 8px); opacity: .55 }
+.dock-spark { display: flex; align-items: flex-end; gap: 2px; height: 22px; padding: 4px 10px 2px }
+.dock-spark i { flex: 1; min-height: 1px; background: var(--c-app); opacity: .7; border-radius: 1px }

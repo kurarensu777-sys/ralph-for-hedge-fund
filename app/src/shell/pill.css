@@ -1,0 +1,6 @@
+/* ---- the command pill with a room scope (scope.ts): chip + a live filter input ---- */
+.mh-cmd.scoped { cursor: text; color: var(--dim) }
+.mh-cmd.scoped:focus-within { border-color: #d9b35b77 }
+.mh-cmd-scope { flex: none; font: 600 10.5px var(--sans); color: var(--accent); background: var(--accent-dim); border-radius: 99px; padding: 1px 8px; white-space: nowrap }
+.mh-cmd-in { flex: 1; min-width: 0; height: 100%; background: none; border: 0; outline: none; color: var(--text); font: 12px var(--sans); padding: 0 }
+.mh-cmd-in::placeholder { color: var(--faint) }

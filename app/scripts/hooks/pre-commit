@@ -1,0 +1,9 @@
+#!/bin/sh
+# fund guard shim (pre-commit): installed by fundd as core.hooksPath. The rules live in guard.mjs.
+HERE=$(dirname "$0")
+if command -v node >/dev/null 2>&1; then
+  exec node "$HERE/guard.mjs" pre-commit "$@"
+fi
+echo "fund guard: node not found on PATH; pre-commit not checked" >&2
+if [ -n "$FUND_AGENT" ]; then exit 1; fi
+exit 0

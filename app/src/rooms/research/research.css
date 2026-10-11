@@ -1,0 +1,425 @@
+/* ROOM: research. The list (explorer), the summary card, the notebook reader, the table, compare.
+   Hairlines over boxes: a section is a caps label and whitespace, a number sits on a rule, and only
+   code keeps a panel. */
+
+/* ---- the list (B-0284): one toolbar over ONE grouped table. The header, the group rows and the study
+   rows share one column template (.research-cols): Study, Market, Style, Format, Result, Headline, Date.
+   The template is --cols on .research-grid, built in list.ts from the columns the list's own width fits
+   (Result, then Format, then Headline give way; Format is hidden when grouped by Format). Colour on the
+   market squares (filled = main market, outlined = any other), the two Style tags and the result dot ---- */
+.research-list { display: flex; flex-direction: column; height: 100%; min-height: 0; container-type: inline-size }
+.ex-body:has(> .research-list) { padding-bottom: 0; overflow: hidden }
+.research-bar { display: flex; align-items: center; gap: var(--s3); padding: var(--s4) var(--s5); border-bottom: 1px solid var(--line); flex: none }
+.research-bar .research-q { flex: 1; min-width: 60px; width: auto }
+.research-gsel { display: inline-flex; align-items: center; gap: var(--s2); height: 22px; border: 1px solid var(--line2); border-radius: var(--r-pill); padding: 0 4px 0 9px; font: 500 var(--fs-xs) var(--mono); color: var(--faint); flex: none; cursor: pointer }
+.research-gsel:hover { border-color: var(--line3); color: var(--dim) }
+.research-gsel select { background: none; border: 0; color: var(--text); font: inherit; cursor: pointer; outline: none; padding: 0 }
+.research-gsel select option { background: var(--panel2); color: var(--text) }
+.research-foldall { flex: none; font-size: var(--fs-lg) }
+.research-list > .failline { margin: var(--s3) var(--s5) 0 }
+.research-grid { flex: 1; min-height: 0; overflow: auto; padding-bottom: var(--s6) }
+
+.research-cols { display: grid; grid-template-columns: var(--cols, minmax(0, 1fr) 44px 84px 76px 84px 88px 36px); align-items: center; column-gap: 10px; padding: 0 var(--s5) 0 26px }
+.research-hd { position: sticky; top: 0; z-index: 2; background: var(--bg2); border-bottom: 1px solid var(--line); height: 28px }
+.research-hd button { border: 0; background: none; padding: 0; text-align: left; font: 600 var(--fs-cap) var(--mono); letter-spacing: .09em; text-transform: uppercase; color: var(--faint); cursor: pointer; user-select: none; white-space: nowrap; overflow: hidden }
+.research-hd button:hover { color: var(--dim) }
+.research-hd button.on { color: var(--text) }
+.research-hd button i { font-style: normal; margin-left: 3px; color: var(--accent) }
+.research-hd .c-lead, .research-hd .c-date { text-align: right }
+
+.research-grp { display: flex; align-items: center; gap: var(--s3); width: 100%; height: 30px; padding: 0 var(--s5) 0 10px; background: none; border: 0; border-top: 1px solid var(--line); color: var(--text); cursor: pointer; text-align: left; font: 600 var(--fs-sm) var(--sans); user-select: none }
+.research-hd + .research-g > .research-grp { border-top: 0 }
+.research-grp:hover { background: var(--panel) }
+.research-grp .chev { width: 10px; font-size: 9px; color: var(--faint); transition: transform .12s; flex: none }
+.research-g.closed .chev { transform: rotate(-90deg) }
+.research-grp .sw { width: 8px; height: 8px; border-radius: 2px; flex: none; border: 1px dashed var(--line3) }
+.research-grp .sw[style] { border: 0 }
+.research-grp .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.research-grp .n { margin-left: auto; font: 400 var(--fs-xs) var(--mono); color: var(--faint); white-space: nowrap }
+
+.research-row { width: 100%; height: 38px; border: 0; border-left: 2px solid transparent; background: none; cursor: pointer; text-align: left; font: var(--fs-md) var(--sans); color: var(--dim); padding-left: 24px }
+.research-row:hover { background: var(--panel) }
+.research-row.on { background: var(--panel2); border-left-color: var(--c-research); color: var(--text) }
+.research-row > span { min-width: 0 }
+.research-row .c-name { display: flex; align-items: center; gap: var(--s3) }
+.research-row .nm { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.2; overflow-wrap: anywhere; color: var(--text) }
+.research-row.legacy .nm { color: var(--faint) }
+.research-row.legacy:hover .nm, .research-row.legacy.on .nm { color: var(--dim) }
+.research-row.legacy .c-format, .research-row.legacy .c-lead { color: var(--faint) }
+.research-row .c-market { display: flex; gap: 4px; align-items: center }
+.research-row .c-market i { width: 8px; height: 8px; border-radius: 2px; display: block; flex: none; box-sizing: border-box }
+.research-row .c-market i.mk-main { background: var(--mk) }
+.research-row .c-market i.mk-also { border: 1.5px solid var(--mk) }
+.research-row .c-style { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; white-space: nowrap; overflow: hidden }
+.research-row .c-style.none { color: var(--faint); font: var(--fs-xs) var(--mono) }
+.research-tg2 { font: var(--fs-cap) var(--mono); padding: 0 6px; border-radius: 3px; border: 1px solid var(--line2); line-height: 14px; color: var(--dim); max-width: 100% }
+.research-tg2.sys { color: var(--ask); border-color: var(--ask-line); background: var(--ask-soft) }
+.research-tg2.dis { color: var(--warn); border-color: var(--warn-line); background: var(--warn-soft) }
+.research-tg2.pace { color: var(--dim); border-style: dashed }
+.research-fault { font: 700 var(--fs-xs) var(--mono); color: var(--fail) }
+.research-row .c-format { font-size: var(--fs-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.research-row .c-result { font: var(--fs-xs) var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--faint) }
+.research-row .c-result.faint { color: var(--dim) }
+.research-row .c-result.ok { color: var(--ok) } .research-row .c-result.warn { color: var(--warn) } .research-row .c-result.fail { color: var(--fail) }
+.research-row .c-result.ok::before, .research-row .c-result.warn::before, .research-row .c-result.fail::before, .research-row .c-result.faint::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; margin-right: 6px; vertical-align: 1px }
+.research-row .c-lead { font: var(--fs-xs) var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right; font-variant-numeric: tabular-nums }
+.research-row .c-lead.ok { color: var(--ok) } .research-row .c-lead.warn { color: var(--warn) } .research-row .c-lead.fail { color: var(--fail) }
+.research-row .c-date { font: var(--fs-xs) var(--mono); color: var(--faint); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap }
+.research-pin { color: var(--accent); font: var(--fs-xs) var(--mono); flex: none }
+.research-kern { font: var(--fs-cap) var(--mono); color: var(--warn); flex: none }
+.research-tagmark { font: var(--fs-cap) var(--mono); color: var(--c-research); flex: none }
+
+/* the card's MARKET tile: one square and name per market */
+.research-mks { display: flex; flex-wrap: wrap; gap: 2px var(--s5) }
+.research-mkn { display: inline-flex; align-items: center; gap: 6px }
+.research-mkn i { width: 8px; height: 8px; border-radius: 2px; flex: none }
+
+.research-head { display: flex; align-items: center; gap: var(--s4) }
+.research-faint { color: var(--faint); font-size: var(--fs-sm) }
+
+/* ---- the two columns: the card, the notebook ---- */
+/* the summary's right edge drags (src/ui/edge.tsx; a dragged width is set inline, floors 300 / 360) */
+.research-split { display: grid; grid-template-columns: minmax(320px, 400px) minmax(0, 1fr); height: 100%; min-height: 0 }
+.research-col-c { position: relative; min-width: 0; min-height: 0; display: grid }
+.research-col-card { overflow: auto; border-right: 1px solid var(--line); background: var(--bg2); min-height: 0 }
+.research-edge { position: absolute; top: 0; bottom: 0; right: -3px; width: 7px; z-index: 3 }
+.research-edge::after { right: 3px }
+.research-col-nb { overflow: auto; min-width: 0 }
+@media (min-width: 1800px) { .research-split { grid-template-columns: 480px 1fr } }
+/* focus (src/shell/focus.ts): one column fills the window; the notebook widens and centres */
+.research-split.focus-nb, .research-split.focus-card { grid-template-columns: minmax(0, 1fr) }
+.research-split.focus-nb .research-col-c, .research-split.focus-card .research-col-nb { display: none }
+.research-split.focus-card .research-col-card { border-right: 0 }
+.research-split.focus-card .research-card { max-width: 1600px; margin: 0 auto }
+.research-split.focus-card .research-sum { zoom: 1.35 }
+.research-split.focus-nb .research-nb { max-width: 1240px; margin: 0 auto }
+.research-focus.on { background: var(--panel2) }
+
+/* ---- the card: ONE fixed layout (B-0275). A fold per section, tiles on hairlines, no boxes ---- */
+.research-card { padding: var(--s7) var(--s7) var(--s9) }
+.research-top { display: flex; align-items: center; gap: var(--s2) }
+.research-top .id { font: var(--fs-xs) var(--mono); color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0 }
+.research-act { margin-left: auto; display: flex; gap: 2px; flex: none }
+.research-act .iconbtn { display: inline-flex; align-items: center; padding: 3px 4px; text-decoration: none }
+.research-act .ico { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round }
+.research-title { display: flex; gap: var(--s4); align-items: flex-start; margin: var(--s4) 0 var(--s6) }
+.research-title .t { flex: 1; min-width: 0; font: 600 var(--fs-xl)/1.3 var(--sans); color: var(--text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; cursor: help }
+.research-title .pill { margin-top: 4px; height: 18px; font-size: var(--fs-xs); padding: 0 8px }
+.research-stateline { font-size: var(--fs-md); color: var(--dim); line-height: 1.5; margin-bottom: var(--s6) }
+.research-card .empty.inline { display: block; padding: 0; line-height: 1.5 }
+.research-card .empty.inline .dot { margin-right: var(--s3); vertical-align: 1px }
+.research-card .empty.inline .big { margin-right: var(--s4) }
+.research-card .empty.inline .why { white-space: normal; overflow: visible }
+
+/* THE FOLD: the caps label is the button, a badge on the right */
+.research-fd { border-top: 1px solid var(--line) }
+.research-fd > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: var(--s3); padding: var(--s5) 0; font: 600 var(--fs-cap) var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--faint); user-select: none }
+.research-fd > summary::-webkit-details-marker { display: none }
+.research-fd > summary::before { content: '\25BE'; font-size: 9px; width: 9px; transition: transform .12s }
+.research-fd:not([open]) > summary::before { transform: rotate(-90deg) }
+.research-fd > summary:hover { color: var(--dim) }
+.research-fd > summary .bd { margin-left: auto; letter-spacing: 0; text-transform: none; font: 500 var(--fs-xs) var(--mono); color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0 }
+.research-fd > .b { padding: 0 0 var(--s7) }
+
+/* TILES: a caps label over its value, the same grid in Overview, Result and Metrics */
+.research-tg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s5) }
+.research-tl { border-top: 1px solid var(--line); padding-top: 4px; min-width: 0 }
+.research-tl.w { grid-column: 1 / -1 }
+.research-tl .k { font: var(--fs-cap) var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.research-tl .v { font: 500 var(--fs-md) var(--mono); color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px }
+.research-tl.w .v { white-space: normal; overflow-wrap: anywhere }
+.research-tl .v.big { font-size: var(--fs-lg) }
+.research-tl .v.ok { color: var(--ok) } .research-tl .v.fail { color: var(--fail) } .research-tl .v.warn { color: var(--warn) } .research-tl .v.na { color: var(--faint) }
+.research-mgp { font: 600 var(--fs-cap) var(--mono); letter-spacing: .1em; color: var(--dim); margin: var(--s7) 0 var(--s3); display: flex; gap: var(--s4); align-items: baseline }
+.research-fd .b > div:first-child > .research-mgp { margin-top: 0 }
+.research-nal { margin-top: var(--s6); font: var(--fs-xs) var(--mono); color: var(--faint) }
+.research-nal span { border-bottom: 1px dotted var(--line3); cursor: help }
+.research-gap { margin-top: var(--s5) }
+
+/* TRADE: fixed label : value rows; the legs, each a side pill, the instrument and its amount */
+.research-kv { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: var(--s3) var(--s4); margin: 0; font-size: var(--fs-md) }
+.research-kvr { display: contents }
+.research-kv dt { font: var(--fs-cap) var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--faint); padding-top: 3px }
+.research-kv dd { margin: 0; color: var(--text); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere }
+.research-kv dd.na { color: var(--faint) }
+.research-kv dd.legs { display: flex; flex-direction: column; gap: 3px; overflow: visible }
+.research-card i.u { font: normal var(--fs-xs) var(--mono); color: var(--warn); margin: 0 2px }
+.research-leg { display: grid; grid-template-columns: 50px minmax(0, 1fr) auto; gap: var(--s3); align-items: center; font: var(--fs-sm) var(--mono) }
+.research-leg .pill { justify-self: start }
+.research-leg .in { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.research-leg .u { color: var(--dim); font-variant-numeric: tabular-nums }
+.research-leg .a { grid-column: 2 / -1; font: var(--fs-cap) var(--mono); color: var(--faint); margin-top: -2px }
+
+/* GATES: a pill and the label, nothing else; groups are small caps; a PASS row is dimmed */
+.research-gsec { font: 600 var(--fs-cap) var(--mono); letter-spacing: .1em; color: var(--dim); margin: var(--s6) 0 var(--s2); grid-column: 1 / -1; cursor: help }
+.research-fd .b > div:first-child > .research-gsec { margin-top: 0 }
+.research-gr { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: var(--s4); align-items: center; padding: 3px 0; font-size: var(--fs-md); cursor: help }
+.research-gr .pill, .research-g2 .pill { min-width: 40px }
+.research-gr .nm, .research-g2 .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0 }
+.research-gr.dim .nm { color: var(--dim) }
+.research-g2 { display: grid; gap: 3px var(--s4); align-items: center; font-size: var(--fs-md) }
+.research-g2 .hd { font: 600 var(--fs-cap) var(--mono); letter-spacing: .1em; color: var(--faint); text-align: center }
+.research-g2 .c { justify-self: center }
+.research-g2 .nm { cursor: help }
+
+/* the folded lists: one line each, the whole on hover */
+.research-ln { font-size: var(--fs-md); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 3px 0; border-bottom: 1px solid var(--line) }
+.research-ln:last-child { border-bottom: 0 }
+.research-ln.dim { color: var(--dim) } .research-ln.na { color: var(--faint) }
+.research-ln.wrap { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; line-height: 1.4 }
+.research-prose { color: var(--text); font-size: var(--fs-md); line-height: 1.5; overflow-wrap: anywhere }
+.research-prose.dim { color: var(--dim); margin-top: var(--s4); font-size: var(--fs-sm) }
+.research-pr { display: grid; grid-template-columns: minmax(0, 1fr) auto 28px; gap: var(--s4); font: var(--fs-sm) var(--mono); padding: 3px 0; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; align-items: center }
+.research-pr span:first-child { color: var(--dim); overflow: hidden; text-overflow: ellipsis } .research-pr span:last-child { text-align: right }
+
+.research-comps { display: flex; flex-direction: column; gap: var(--s4) }
+.research-comp { display: grid; grid-template-columns: 88px 1fr 72px; align-items: start; gap: var(--s4); font: var(--fs-sm) var(--mono) }
+.research-comp .nm { color: var(--dim); overflow-wrap: anywhere }
+.research-comp .bar { position: relative; height: 6px; margin-top: 5px; background: var(--panel2); border-radius: var(--r-xs) }
+.research-comp .bar::after { content: ''; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--line3) }
+.research-comp .bar span { position: absolute; top: 0; bottom: 0; border-radius: var(--r-xs) }
+.research-comp .bar .pos { background: var(--ok) } .research-comp .bar .neg { background: var(--fail) }
+.research-comp .val { text-align: right; color: var(--text); font-variant-numeric: tabular-nums }
+.research-comp .val.ok { color: var(--ok) } .research-comp .val.fail { color: var(--fail) }
+
+.research-eq { margin-bottom: var(--s5) }
+.research-eq svg { width: 100%; height: 72px; display: block; border-bottom: 1px solid var(--line) }
+.research-eq polyline { fill: none; stroke-width: 1.5 } .research-eq polyline.up { stroke: var(--ok) } .research-eq polyline.down { stroke: var(--fail) }
+.research-eq-l { display: flex; justify-content: space-between; font: var(--fs-xs) var(--mono); color: var(--faint); margin-top: var(--s2); font-variant-numeric: tabular-nums }
+
+/* sections: an ok one wears the soft ok fill, a not-ok one a dashed hairline */
+.research-sections { display: flex; gap: var(--s2); flex-wrap: wrap }
+.research-secchip { font: 500 var(--fs-xs) var(--mono); color: var(--ok); background: var(--ok-soft); border: 1px solid transparent; border-radius: var(--r-xs); padding: 0 5px; display: inline-flex; gap: 3px; align-items: center; height: 17px }
+.research-secchip.na { color: var(--faint); background: none; border-color: var(--line2); border-style: dashed }
+.research-secchip i { font-style: normal; color: var(--dim) }
+.research-probs { margin: 0 0 var(--s6); padding-left: 16px; color: var(--fail); font: var(--fs-sm) var(--mono); line-height: 1.5 }
+
+/* a loop record: predicted vs actual on the same hairline grid */
+.research-bands { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: var(--s5) }
+.research-band { border-top: 1px solid var(--line); padding-top: var(--s3); min-width: 0 }
+.research-band .k { font: var(--fs-xs) var(--mono); color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.research-band .v { font: 500 var(--fs-lg) var(--mono); color: var(--text); font-variant-numeric: tabular-nums }
+.research-band .b { font: var(--fs-cap) var(--mono); color: var(--faint); font-variant-numeric: tabular-nums }
+.research-band.ok .v { color: var(--ok) }
+.research-band.warn .v { color: var(--warn) }
+
+.research-nbfacts { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s6); margin-top: var(--s5); font: var(--fs-xs) var(--mono); color: var(--faint); font-variant-numeric: tabular-nums }
+.research-nbfacts .warn { color: var(--warn) }
+
+/* ---- the notebook: a sticky section strip that jumps, then react-ipynb-renderer's classic-notebook
+   classes, read as one document ---- */
+.research-jump { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); padding: var(--s4) var(--s8); display: flex; gap: 4px; align-items: center; min-height: 37px }
+.research-jump .sp { flex: 1 }
+.research-jump .research-focus, .research-bar .research-focus { display: inline-flex; align-items: center; padding: 3px 4px }
+.research-focus .ico { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round }
+.research-split.focus-nb .research-jump { padding-left: max(var(--s8), calc((100% - 1240px) / 2 + var(--s8))) }
+.research-nb { padding: var(--s7) var(--s8) 80px; max-width: 960px; color: var(--text) }
+.research-nb .container { width: auto; padding: 0 }
+.research-nb .cell { display: flex; flex-direction: column; padding: 0; border: 0 }
+/* the renderer's cell wrapper is called .input, which the kit's form field also is: undo the field */
+.research-nb .input { background: none; border: 0; border-radius: 0; padding: 0; width: auto; color: inherit; font: inherit; outline: none }
+/* the renderer classes EVERY cell code_cell, markdown too: code is the input holding an input_area */
+.research-nb.nocode .input:has(.input_area) { display: none }
+.research-nb.nocode .cell:has(.input_area):not(:has(.output_area)) { display: none }
+.research-nb .prompt { display: none }
+.research-nb .input_area { margin: var(--s4) 0; background: var(--code); border: 1px solid var(--line); border-radius: var(--r); font: var(--fs-sm)/1.5 var(--mono); overflow: auto; max-height: 460px }
+.research-nb .input_area pre { padding: var(--s5) var(--s6) !important }
+.research-nb .input_area pre, .research-nb .input_area code { font: inherit !important; background: transparent !important; margin: 0 !important }
+.research-nb .output_area { margin: var(--s3) 0 var(--s5) }
+.research-nb .output_text pre, .research-nb .output_stream pre, .research-nb .output_subarea > pre { font: var(--fs-sm)/1.55 var(--mono); color: var(--dim); white-space: pre-wrap; margin: 0; max-height: 360px; overflow: auto; font-variant-numeric: tabular-nums }
+.research-nb .output_error pre { color: var(--fail) }
+.research-nb .output_png, .research-nb .output_jpeg, .research-nb .output_svg { margin: var(--s4) 0 }
+/* a plot keeps its own white ground: matplotlib draws dark ink on a transparent figure */
+.research-nb .output_png img, .research-nb .output_jpeg img, .research-nb .output_svg svg { max-width: 100%; height: auto; background: #fff; border-radius: var(--r-sm); display: block }
+/* every figure opens full screen (FigViewer.tsx) */
+.research-nb img, .research-nb .output_svg svg { cursor: zoom-in }
+
+/* ---- the figure viewer: over the whole window (a portal on body), fitted, zoomable, stepping ---- */
+.research-fv { position: fixed; inset: 0; z-index: 200; background: var(--bg); display: grid; grid-template-rows: 40px minmax(0, 1fr) }
+.research-fv-top { display: flex; align-items: center; gap: var(--s5); padding: 0 var(--s7); border-bottom: 1px solid var(--line); background: var(--bg); font: var(--fs-xs) var(--mono); color: var(--faint); min-width: 0 }
+.research-fv-top b { font: 600 var(--fs-md) var(--sans); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0 }
+.research-fv-top .where { white-space: nowrap; font-variant-numeric: tabular-nums }
+.research-fv-top .sp { flex: 1 }
+.research-fv-box { position: relative; overflow: hidden; min-height: 0 }
+.research-fv-box img { position: absolute; left: 50%; top: 50%; transform-origin: 0 0; max-width: none; background: #fff; border-radius: var(--r-sm); box-shadow: 0 10px 40px #000a; user-select: none; cursor: zoom-in; touch-action: none }
+.research-fv-box.z img { cursor: grab }
+.research-fv-box.z img:active { cursor: grabbing }
+.research-fv-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 64px; border: 1px solid var(--line2); background: color-mix(in srgb, var(--panel) 85%, transparent); color: var(--text); border-radius: var(--r); cursor: pointer; font: var(--fs-2xl) var(--mono) }
+.research-fv-nav:hover { border-color: var(--line3) }
+.research-fv-nav.prev { left: var(--s7) }
+.research-fv-nav.next { right: var(--s7) }
+
+.research-nb .rendered_html { font-size: var(--fs-lg); line-height: 1.6; overflow-x: auto; color: var(--text) }
+.research-nb .rendered_html > :first-child { margin-top: 0 }
+.research-nb .rendered_html p { margin: 0 0 var(--s5) }
+.research-nb .rendered_html h1 { font: 600 var(--fs-2xl)/1.3 var(--sans); margin: var(--s4) 0 var(--s5); scroll-margin-top: 48px }
+.research-nb .rendered_html h2 { font: 600 var(--fs-xl)/1.35 var(--sans); margin: var(--s9) 0 var(--s4); padding-top: var(--s7); border-top: 1px solid var(--line); scroll-margin-top: 36px }
+.research-nb .rendered_html h3 { font: 600 var(--fs-lg)/1.4 var(--sans); margin: var(--s8) 0 var(--s3) }
+.research-nb .rendered_html h4, .research-nb .rendered_html h5 { font: 600 var(--fs-md) var(--sans); color: var(--dim); margin: var(--s7) 0 var(--s3) }
+.research-nb .rendered_html ul, .research-nb .rendered_html ol { margin: 0 0 var(--s5); padding-left: 20px }
+.research-nb .rendered_html li + li { margin-top: var(--s2) }
+.research-nb .rendered_html blockquote { margin: 0 0 var(--s5); padding-left: var(--s6); border-left: 2px solid var(--line2); color: var(--dim) }
+.research-nb .rendered_html hr { border: 0; border-top: 1px solid var(--line); margin: var(--s8) 0 }
+.research-nb .rendered_html strong, .research-nb .rendered_html b { font-weight: 600 }
+.research-nb .rendered_html code { font: var(--fs-sm) var(--mono); background: var(--code); border: 1px solid var(--line); padding: 0 4px; border-radius: var(--r-xs) }
+.research-nb .rendered_html pre code { border: 0; padding: 0 }
+.research-nb .rendered_html pre { font: var(--fs-sm)/1.5 var(--mono); background: var(--code); border: 1px solid var(--line); border-radius: var(--r); padding: var(--s5) var(--s6); overflow: auto }
+.research-nb .rendered_html a { color: var(--text); text-decoration: underline; text-decoration-color: var(--line3); text-underline-offset: 2px }
+.research-nb .rendered_html a:hover { text-decoration-color: var(--dim) }
+
+/* tables: horizontal hairlines only. A markdown table is prose (sans, left); an output table is data
+   (mono, right, the index column left) */
+.research-nb .rendered_html table { border-collapse: collapse; margin: var(--s4) 0 var(--s6); font-variant-numeric: tabular-nums }
+.research-nb .rendered_html th, .research-nb .rendered_html td { border: 0; border-bottom: 1px solid var(--line); padding: var(--s3) var(--s5); vertical-align: top }
+.research-nb .rendered_html th { font: 600 var(--fs-cap) var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); border-bottom-color: var(--line2); background: none; white-space: nowrap; vertical-align: bottom }
+.research-nb .rendered_html th:first-child, .research-nb .rendered_html td:first-child { padding-left: 0 }
+.research-nb .rendered_html th:last-child, .research-nb .rendered_html td:last-child { padding-right: 0 }
+.research-nb .text_cell_render table { font: var(--fs-md)/1.5 var(--sans); width: 100% }
+.research-nb .text_cell_render th, .research-nb .text_cell_render td { text-align: left !important }
+.research-nb .text_cell_render td:first-child { color: var(--dim); min-width: 7em }
+.research-nb .output_subarea table { font: var(--fs-sm)/1.45 var(--mono) }
+.research-nb .output_subarea th, .research-nb .output_subarea td { text-align: right }
+.research-nb .output_subarea th:first-child, .research-nb .output_subarea td:first-child { text-align: left }
+.research-nb .output_subarea tbody th { color: var(--dim); font: var(--fs-sm) var(--mono); letter-spacing: 0; text-transform: none; border-bottom-color: var(--line) }
+
+/* ---- the table and compare ---- */
+.research-table-wrap { padding: var(--s7) var(--s7) var(--s9); overflow: auto; height: 100% }
+.research-table-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s3); margin-bottom: var(--s5) }
+.research-table-head .research-sec { margin: 0 var(--s2) 0 0 }
+.research-table-head .pill:first-of-type { margin-left: auto }
+.research-sec { font: 600 var(--fs-cap) var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--faint) }
+.research-table { border-collapse: collapse; font: var(--fs-sm) var(--mono); width: 100%; font-variant-numeric: tabular-nums }
+.research-table th { position: sticky; top: 0; z-index: 1; background: var(--bg); font: 600 var(--fs-cap) var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); text-align: right; padding: var(--s4) var(--s4) var(--s3); border-bottom: 1px solid var(--line2); cursor: pointer; white-space: nowrap; user-select: none }
+.research-table th:hover { color: var(--dim) }
+.research-table th.on { color: var(--accent) }
+.research-table th .research-sort { margin-left: 3px }
+.research-table td { padding: var(--s3) var(--s4); border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; color: var(--text) }
+.research-table th:first-child, .research-table td:first-child { padding-left: 0 }
+.research-table th:last-child, .research-table td:last-child { padding-right: 0 }
+.research-table th:first-child, .research-table td:first-child, .research-table th:nth-child(2), .research-table td:nth-child(2), .research-table th:nth-child(4), .research-table td.win { text-align: left }
+.research-table td.nm { font-family: var(--sans); font-size: var(--fs-md); max-width: 200px; overflow: hidden; text-overflow: ellipsis }
+.research-table tr { cursor: pointer } .research-table tbody tr:hover td { background: var(--panel) }
+.research-table td.na { color: var(--faint) } .research-table td.ok { color: var(--ok) } .research-table td.fail { color: var(--fail) }
+.research-table td.win { color: var(--dim) }
+.research-table tr.nocard td { color: var(--faint) } .research-table tr.nocard td.nm { color: var(--dim) }
+.research-table td.rest { text-align: left; max-width: 0; overflow: hidden; text-overflow: ellipsis; width: 100% }
+.research-table td.rest .research-faint { margin-left: var(--s3); font-size: var(--fs-xs) }
+.research-rest { margin-top: var(--s9) }
+/* compare: two columns of the card's places; the second's cell tinted where it differs */
+.research-cmp tr { cursor: default }
+.research-cmp th:nth-child(n+2), .research-cmp td:nth-child(n+2) { text-align: left; white-space: normal; width: 42% }
+.research-cmp th:nth-child(n+2) { cursor: pointer; text-transform: none; letter-spacing: 0; font: 500 var(--fs-sm) var(--mono); color: var(--text) }
+.research-cmp td.nm { width: 16%; color: var(--dim) }
+.research-cmp td.d { background: var(--accent-dim) }
+
+/* ---- finding results: the filter bar on one row, label column then chips ---- */
+.research-fmts { margin-bottom: var(--s4) }
+.research-filters { display: flex; flex-direction: column; gap: var(--s3); margin: 0 0 var(--s6); padding: 0 0 var(--s5); border-bottom: 1px solid var(--line) }
+.research-frow { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap }
+.research-frow .research-q { max-width: 240px }
+.research-frow .chip .research-faint { font-size: var(--fs-xs) }
+.research-fsp { flex: 1 }
+.research-fmore { display: flex; flex-direction: column; gap: var(--s3); padding-top: var(--s3) }
+.research-flbl { font: 600 var(--fs-cap) var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); width: 58px; flex: none }
+.research-fsel { width: 130px } .research-fop { width: 58px } .research-fval { width: 90px }
+.research-colpick { position: relative }
+.research-colmenu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 5; background: var(--panel); border: 1px solid var(--line2); border-radius: var(--r); padding: var(--s4) var(--s5); display: grid; grid-template-columns: repeat(2, max-content); gap: var(--s2) var(--s6); font: var(--fs-sm) var(--mono); color: var(--dim); box-shadow: 0 8px 24px #0006 }
+.research-colmenu label { display: flex; gap: var(--s3); align-items: center; cursor: pointer; white-space: nowrap }
+.research-colmenu .lnk { grid-column: 1 / -1; justify-self: start; margin-top: var(--s2) }
+
+/* ---- THE SUMMARY CARD (B-0399): question, answer, facts, big numbers, two columns of metrics, the size
+   table, the footer. Verdict chips wear the state colours (PASS ok, FAIL fail, FLAG warn, INFO faint) ---- */
+.research-sum .ok, .research-qb .ok { color: var(--ok) } .research-sum .fail, .research-qb .fail { color: var(--fail) } .research-sum .warn, .research-qb .warn { color: var(--warn) } .research-sum .faint, .research-qb .faint { color: var(--faint) }
+.research-st { font: 600 var(--fs-cap) var(--mono); letter-spacing: .03em; display: inline-block; min-width: 30px; text-align: right; color: var(--faint) }
+.research-sl { font: 600 var(--fs-cap) var(--mono); letter-spacing: .09em; text-transform: uppercase; color: var(--faint); margin: var(--s6) 0 var(--s3) }
+.research-sq { font-size: var(--fs-lg); font-weight: 600; line-height: 1.3; overflow-wrap: anywhere }
+.research-sa { font-size: var(--fs-md); color: var(--dim); margin-top: var(--s2); overflow-wrap: anywhere }
+.research-sf { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--s3) var(--s6); margin: 0 }
+.research-sf > div { min-width: 0 }
+.research-sf dt { font-size: var(--fs-xs); color: var(--faint) }
+.research-sf dd { margin: 0; font-size: var(--fs-sm); overflow-wrap: anywhere }
+.research-sb { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: var(--s3) }
+.research-sb .bt { display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--line); border-top: 3px solid var(--line2); border-radius: var(--r-md); padding: var(--s4) var(--s5) }
+.research-sb .bt.ok { border-top-color: var(--ok) } .research-sb .bt.fail { border-top-color: var(--fail) } .research-sb .bt.warn { border-top-color: var(--warn) }
+.research-sb .g { font: 600 var(--fs-cap) var(--mono); color: var(--faint) }
+.research-sb .mn { font-size: var(--fs-xs); color: var(--dim); margin-top: 2px }
+.research-sb .n { font: 600 var(--fs-xl) var(--mono); font-variant-numeric: tabular-nums; margin: var(--s2) 0; overflow-wrap: anywhere; color: var(--text) }
+.research-sb .f { display: flex; flex-wrap: wrap; overflow-wrap: anywhere; gap: var(--s3); align-items: center; font-size: var(--fs-xs); color: var(--faint); min-width: 0 }
+.research-sb .f .research-st { min-width: 0 }
+.research-sc { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0 var(--s7) }
+.research-sc h4 { margin: var(--s5) 0 var(--s2); padding-bottom: 3px; border-bottom: 1px solid var(--line2); font: 600 var(--fs-sm) var(--sans); color: var(--text) }
+.research-sc .met { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(84px, 36%) 40px; gap: 0 var(--s4); align-items: baseline; padding: 3px 0; border-bottom: 1px solid var(--line); font-size: var(--fs-md) }
+.research-sc .met > span { min-width: 0; overflow-wrap: anywhere }
+.research-sc .mn { color: var(--dim) }
+.research-sc .v { text-align: right; white-space: nowrap; font: 600 var(--fs-sm) var(--mono); font-variant-numeric: tabular-nums }
+.research-sc .bar { font-size: var(--fs-xs); color: var(--faint) }
+.research-ssw { overflow-x: auto }
+.research-ss { width: 100%; border-collapse: collapse; font-size: var(--fs-md) }
+.research-ss th { font: 600 var(--fs-cap) var(--mono); letter-spacing: .06em; color: var(--faint); text-align: left; vertical-align: bottom; padding: 0 var(--s3) 5px; border-bottom: 1px solid var(--line2) }
+.research-ss td { padding: 4px var(--s3); border-bottom: 1px solid var(--line) }
+.research-ss th.v, .research-ss td.v { white-space: nowrap; width: 1% }
+.research-ss th.r, .research-ss td.r { text-align: right }
+.research-ss td.r { font: var(--fs-sm) var(--mono); font-variant-numeric: tabular-nums }
+.research-ss td.k { font-weight: 600 }
+.research-ss tr.pick td { background: color-mix(in srgb, var(--ok) 8%, transparent) }
+.research-sfoot { margin-top: var(--s6); padding-top: var(--s3); border-top: 1px solid var(--line); font-size: var(--fs-sm); color: var(--faint) }
+.research-sfoot div { margin: 2px 0; overflow-wrap: anywhere }
+
+/* ---- the Charts view (B-0505): one card per chart type of the chart bank ---- */
+.research-chart-cat { margin-top: var(--s8) }
+.research-chart-cat:first-of-type { margin-top: var(--s6) }
+.research-chart-cat-h { display: flex; align-items: baseline; gap: var(--s4); margin: 0; font: 600 var(--fs-lg) var(--sans); color: var(--text) }
+.research-chart-cat-asks { font: 400 var(--fs-sm) var(--sans); color: var(--dim) }
+.research-chart-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: var(--s7); margin-top: var(--s6) }
+.research-chart { display: flex; flex-direction: column; gap: var(--s4); min-width: 0; padding-top: var(--s5); border-top: 1px solid var(--line2) }
+.research-chart-top { display: flex; align-items: center; gap: var(--s3) }
+.research-chart-kind { font: 600 var(--fs-cap) var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.research-chart-q { margin: 0; font: 600 var(--fs-lg) var(--sans); color: var(--text); line-height: 1.35 }
+.research-chart-when { margin: 0; font-size: var(--fs-sm); line-height: 1.5; color: var(--dim); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden }
+.research-chart-fig { display: block; padding: 0; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--panel); cursor: zoom-in; overflow: hidden }
+.research-chart-fig:hover { border-color: var(--line3) }
+.research-chart-fig img { display: block; width: 100%; height: auto }
+.research-chart-fw > summary { padding: var(--s3) 0 }
+.research-chart-fw > .b { padding: 0 0 var(--s5) }
+.research-chart-ln { margin-bottom: var(--s4) }
+.research-chart-ln .md { font-size: var(--fs-sm); line-height: 1.5; max-width: none }
+.research-chart-ln .md ul { margin: var(--s2) 0 0; padding-left: 18px }
+.research-chart-foot { display: flex; align-items: center; gap: var(--s4); flex-wrap: wrap; font-size: var(--fs-sm) }
+.research-chart-used { color: var(--dim); min-width: 0 }
+
+/* ---- the Questions block (B-0524): under the summary card, each section's question, gate chips, figures and tables ---- */
+.research-qb { margin-top: var(--s8); border-top: 2px solid var(--line3); padding-top: var(--s5) }
+.research-qh { display: flex; align-items: baseline; gap: var(--s5); flex-wrap: wrap }
+.research-qh .research-sl { margin: 0 }
+.research-qseg { display: flex; border: 1px solid var(--line2); border-radius: var(--r-sm); overflow: hidden }
+.research-qseg button { font: var(--fs-xs) var(--sans); padding: 2px var(--s4); color: var(--dim); background: none; border: 0; cursor: pointer }
+.research-qseg button.on { background: var(--panel3); color: var(--text) }
+.research-qjump { position: sticky; top: 0; z-index: 2; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: thin; white-space: nowrap; background: var(--bg2); padding: var(--s4) 0; margin-top: var(--s3); border-bottom: 1px solid var(--line) }
+.research-qjump .chip { flex: none }
+.research-qjump .chip i { font-style: normal; font-weight: 400; color: var(--faint); margin-left: var(--s3) }
+.research-qs { padding: var(--s6) 0 var(--s4); border-bottom: 1px solid var(--line); scroll-margin-top: 46px }
+.research-qs:last-of-type { border-bottom: 0 }
+.research-qsh { display: flex; align-items: center; gap: var(--s4); flex-wrap: wrap }
+.research-qid { font: 700 var(--fs-cap) var(--mono); background: var(--panel3); color: var(--text); border-radius: var(--r-xs); padding: 1px var(--s3) }
+.research-qn { font: 600 var(--fs-cap) var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--faint) }
+.research-qg { display: flex; flex-wrap: wrap; gap: var(--s3); margin-left: auto }
+.research-qgc { display: inline-flex; align-items: center; gap: var(--s3); font-size: var(--fs-xs); color: var(--dim); border: 1px solid var(--line2); border-radius: 12px; padding: 1px var(--s3) 1px var(--s4) }
+.research-qgc b { color: var(--faint); font: 600 var(--fs-cap) var(--mono) }
+.research-qgc .research-st { min-width: 0 }
+.research-qq { margin: var(--s4) 0 var(--s2); font: 600 var(--fs-lg) var(--sans); line-height: 1.35; color: var(--text); overflow-wrap: anywhere }
+.research-qr { font-size: var(--fs-sm); color: var(--faint); overflow-wrap: anywhere }
+.research-qr span { font: 600 var(--fs-cap) var(--mono); letter-spacing: .06em; text-transform: uppercase; margin-right: var(--s3) }
+.research-qrd { list-style: none; margin: var(--s4) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s2) var(--s7); font-size: var(--fs-md) }
+.research-qrd b { color: var(--faint); font: 600 var(--fs-cap) var(--mono); margin-right: var(--s3) }
+.research-qf { display: grid; gap: var(--s5); margin: var(--s5) 0 }
+.research-qf.c1 { grid-template-columns: 1fr }
+.research-qf.c2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)) }
+.research-qf figure { margin: 0; min-width: 0; border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; background: var(--panel) }
+.research-qf .t { font: 600 var(--fs-sm) var(--sans); padding: var(--s3) var(--s5); border-bottom: 1px solid var(--line); overflow-wrap: anywhere }
+.research-qimg { display: block; width: 100%; padding: 0; border: 0; background: #fff; cursor: zoom-in }
+.research-qimg img { display: block; width: 100%; height: auto }
+.research-qf .b { display: flex; justify-content: space-between; gap: var(--s4); font-size: var(--fs-xs); color: var(--faint); padding: var(--s3) var(--s5); border-top: 1px solid var(--line) }
+.research-qf .b code { font: var(--fs-xs) var(--mono); overflow-wrap: anywhere }
+.research-qt { margin: var(--s4) 0 }
+.research-qt p { margin: 0; padding: var(--s4) var(--s5); border-left: 3px solid var(--line2); color: var(--dim); font-size: var(--fs-md) }
+.research-qt code { font: var(--fs-sm) var(--mono) }

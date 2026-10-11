@@ -1,0 +1,194 @@
+{
+  "$comment": "The cockpit scheduler's jobs: kind 'script' = run `cmd` (an argv array, no shell; a relative cmd[0] such as .venv/Scripts/python.exe resolves against the FUND ROOT) with cwd = `cwd` (fund-relative), killed at timeout_s; `cadence` is LOCAL time, one of 'daily HH:MM' | 'every Nh' | 'every Nm' | 'weekly DOW HH:MM' | 'at <iso>', an occurrence not started within window_s is logged missed.\n`health: true` = the scheduler records the job's reading (ops.health_readings system:<id>) from the exit code (0 ok, 1 fail, else unknown; a job's own `exit` map, e.g. {\"1\": \"unknown\"}, overrides a code, never a kill); false = the tool records its own reading(s) and the scheduler must not add one. Fields may be added; never rename id/kind/cadence/cwd/cmd/window_s/timeout_s/health.",
+  "version": 2,
+  "jobs": [
+    {
+      "id": "probe-sweep",
+      "kind": "script",
+      "note": "every probe, one subprocess each (it writes its own probe-sweep row)",
+      "cadence": "daily 07:30",
+      "cwd": ".",
+      "cmd": [
+        ".venv/Scripts/python.exe",
+        "app/tools/probes/run_all.py",
+        "--quiet"
+      ],
+      "window_s": 10800,
+      "timeout_s": 2400,
+      "health": false,
+      "why": "The one writer of the probe rows. One subprocess per probe, so a hung call costs exactly one row."
+    },
+    {
+      "id": "probe-git",
+      "kind": "script",
+      "note": "uncommitted and unpushed work in every repo of repos.json",
+      "cadence": "every 4h",
+      "cwd": ".",
+      "cmd": [
+        ".venv/Scripts/python.exe",
+        "app/tools/probes/git.py",
+        "--quiet"
+      ],
+      "window_s": 10800,
+      "timeout_s": 180,
+      "health": false,
+      "why": "Only `behind > 0` is unconditionally red; the dirty/ahead limits are wide on purpose, because a probe that reddens at a normal day's in-flight work gets ignored."
+    },
+    {
+      "id": "probe-staleness",
+      "kind": "script",
+      "note": "silence -> a red row. The job that notices the others stopped",
+      "cadence": "every 6h",
+      "cwd": ".",
+      "cmd": [
+        ".venv/Scripts/python.exe",
+        "app/tools/probes/staleness.py",
+        "--quiet"
+      ],
+      "window_s": 14400,
+      "timeout_s": 120,
+      "health": true,
+      "why": "It walks the probe REGISTRY, not the health directory, so a probe whose file was never written renders `unknown - never reported`. It writes no row of its own, so it takes the scheduler's."
+    },
+    {
+      "id": "retro-due",
+      "kind": "script",
+      "note": "the retro debt line over every lab/ desk - due at 7 days or 5 runs",
+      "cadence": "daily 08:00",
+      "cwd": ".",
+      "cmd": [
+        ".venv/Scripts/python.exe",
+        "app/loop/tools/retro_due.py",
+        "--line"
+      ],
+      "window_s": 21600,
+      "timeout_s": 300,
+      "health": true,
+      "exit": {
+        "1": "unknown"
+      },
+      "why": "The mechanism behind the retro nag: it reads each desk's stamp, counts the pre-registered runs since it, and answers in an exit code (1 = a desk is due). A due retro is a nag, not a failure, so exit 1 reads as unknown (amber), never a red fail."
+    },
+    {
+      "id": "grade",
+      "kind": "script",
+      "note": "calibration per lab/ desk; flags a judge predicting too wide",
+      "cadence": "weekly mon 08:10",
+      "cwd": ".",
+      "cmd": [
+        ".venv/Scripts/python.exe",
+        "app/loop/tools/grade.py"
+      ],
+      "window_s": 86400,
+      "timeout_s": 600,
+      "health": true,
+      "why": "A band that always hits is not a good judge, it is a wide one, and nobody writes that flag by hand. Exit 0 always: a report, not a gate."
+    },
+    {
+      "id": "budget",
+      "kind": "script",
+      "note": "tokens per agent (the roster, app/agents/<id>.md) per day -> its reading system:budget in the ops store",
+      "cadence": "every 6h",
+      "cwd": ".",
+      "cmd": [
+        ".venv/Scripts/python.exe",
+        "app/tools/budget/usage.py",
+        "--days",
+        "1"
+      ],
+      "window_s": 14400,
+      "timeout_s": 600,
+      "health": false,
+      "why": "The moment an unattended loop can spend without a ceiling, a bug in a cadence becomes a bill. The meter reads Claude Code's own session transcripts."
+    },
+    {
+      "id": "budget-week",
+      "kind": "script",
+      "note": "the week, per agent per day, for the retro",
+      "cadence": "weekly mon 08:05",
+      "cwd": ".",
+      "cmd": [
+        ".venv/Scripts/python.exe",
+        "app/tools/budget/usage.py",
+        "--days",
+        "7",
+        "--no-health"
+      ],
+      "window_s": 86400,
+      "timeout_s": 900,
+      "health": true,
+      "why": "`--no-health` on purpose: the daily `budget` job owns the system:budget reading, and a weekly window written into a daily row would date the wall wrong."
+    },
+    {
+      "id": "db-backup",
+      "kind": "script",
+      "note": "pg_dump of the ops store, checked with pg_restore --list, newest 14 kept (database's fund_db.backup)",
+      "cadence": "daily 03:30",
+      "cwd": ".",
+      "cmd": [
+        ".venv/Scripts/python.exe",
+        "-m",
+        "fund_db",
+        "backup"
+      ],
+      "window_s": 72000,
+      "timeout_s": 600,
+      "health": true,
+      "why": "The ops store (PostgreSQL, through @fund/db) holds every conversation, job run and usage row; a nightly ops-YYYY-MM-DD.dump under ~/fund-data/backups/db keeps 14 days to restore from."
+    },
+    {
+      "id": "loop-pass",
+      "kind": "script",
+      "note": "the self-improvement loop: metrics, lessons, proposals, watches",
+      "cadence": "daily 08:20",
+      "cwd": ".",
+      "cmd": [
+        "node",
+        "-e",
+        "fetch('http://127.0.0.1:'+(process.env.FUNDD_PORT||4689)+'/api/loop/pass?trigger='+(process.env.FUND_JOB_TRIGGER||'schedule'),{method:'POST'}).then(async r=>{console.log(r.status,(await r.text()).slice(0,400));process.exit(r.ok?0:1)}).catch(e=>{console.error(e.message);process.exit(1)})"
+      ],
+      "window_s": 14400,
+      "timeout_s": 600,
+      "health": true,
+      "why": "One pass a day: rebuild the per-agent score series, capture lessons, propose, and close or revert watched changes."
+    },
+    {
+      "id": "board-archive",
+      "kind": "script",
+      "note": "done board items older than 14 days move to board/done/, committed",
+      "cadence": "weekly sun 05:00",
+      "cwd": ".",
+      "cmd": [
+        "node",
+        "app/scripts/board.mjs",
+        "archive",
+        "--days",
+        "14",
+        "--commit"
+      ],
+      "window_s": 86400,
+      "timeout_s": 120,
+      "health": true,
+      "why": "The Board room reads board/*.md only, so a done column that only grows buries the live work. The archive keeps the highest-numbered item (ids are max+1 of board/), anything a staying item names in blocked_by, and anything uncommitted; it commits exactly the moved paths (Agent: fund, Board-Archive trailer) and never pushes. Exit 1 = refused commit, every file put back."
+    },
+    {
+      "id": "cache-clean",
+      "kind": "script",
+      "note": "the market cache: evict every month nobody read in 14 days, then down to the 500 MB budget; reports the cache, pins and archive sizes",
+      "cadence": "weekly sun 05:30",
+      "cwd": ".",
+      "cmd": [
+        ".venv/Scripts/python.exe",
+        "-m",
+        "fund_db",
+        "cache",
+        "--clean",
+        "--json"
+      ],
+      "window_s": 86400,
+      "timeout_s": 600,
+      "health": true,
+      "why": "B-0322 / B-0335 (the owner, 2026-10-03: \"set up like a weekly data cleaning loop\"). The CACHE class is rebuildable by design, so cleaning it loses nothing; the command never touches a pin or an archive series (database: a test pins a series, ages its cache month, cleans and reads the pin back). Exit 0 = ok (a run that evicted nothing too), 1 = it could not run OR the cache is still over budget after the clean (only archive or locked months remain: a human must look). The last stdout line is one JSON object; archive_bytes growing week on week is the number the owner asked to see, and the Data room shows it. Sunday 05:30 sits after board-archive (05:00). Grace 24h: the scheduler runs only while fundd is up and never runs late."
+    }
+  ]
+}

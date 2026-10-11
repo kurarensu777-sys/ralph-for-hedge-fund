@@ -1,0 +1,329 @@
+/* ROOM: library. A calm dark room: warm wood edges, muted leather spines, dense lists. Layout and
+   the room's own wood only; cards, pills, chips, tags, meters, lists and states are the kit's. */
+.library-swatch { display: inline-block; width: 8px; height: 8px; border-radius: 2px; flex: none; box-shadow: inset 0 0 0 1px #ffffff14 }
+.library-swatch.all { background: repeating-linear-gradient(90deg, #8a6a48 0 2px, #56638a 2px 4px, #4e6f6a 4px 6px) }
+.library-k { margin: 18px 0 var(--s4) }
+.library-k-sp { margin-top: 26px }
+.library-frame { height: 100%; display: flex; flex-direction: column; min-height: 0 }
+/* the 32px toolbar under the header: filter, Show, Links (the header keeps only title, pill and views) */
+.library-bar { height: 32px; flex: none; display: flex; align-items: center; gap: var(--s4); padding: 0 var(--gutter); border-bottom: 1px solid var(--line); background: var(--bg) }
+.library-body { flex: 1; min-height: 0; overflow: auto }
+.library-body > .skel { padding: 18px 22px }
+.library-bar input.library-search { width: 200px; flex: none; height: 24px; font-size: var(--fs-md); padding: 2px 9px }
+.library-seg { flex: none; display: inline-flex }
+.library-texttog { flex: none; height: 22px; padding: 0 8px; border: 1px solid var(--line2); border-radius: 5px; background: transparent; color: var(--faint); font: var(--fs-xs) var(--mono); cursor: pointer }
+.library-texttog:hover { color: var(--text) }
+.library-texttog.on { color: var(--accent); border-color: var(--accent-line) }
+
+/* ---------- the side list: the kit's card groups ---------- */
+.library-ex { padding-bottom: 56px }
+.library-card .row { border-radius: 6px }
+.library-card .row .nchip { flex: none }
+/* the vet card's ten-slot strip fits beside its name in the side list */
+.library-card .heat { --hc: 7px; gap: 2px }
+.library-card .heat i { height: 12px }
+/* one tag look for every type (the word is the type); a book-less row carries a hollow dot, not a dimmer tag */
+.library-vtag { font: 600 var(--fs-cap) var(--mono); letter-spacing: .08em; color: var(--dim); border: 1px solid var(--line2); border-radius: var(--r-xs); padding: 0 4px; width: 34px; text-align: center; flex: none }
+.library-vet.nobook { cursor: default }
+/* a shelf's topic rows under it (a tick box each: several may be on, any of them matches) */
+.library-trow { padding-top: 3px; padding-bottom: 3px }
+.library-trow.zero .nm, .library-trow.zero .r { opacity: .5 }
+.library-trow.faint { cursor: default; font-size: var(--fs-sm) }
+.library-ck { width: 9px; height: 9px; border: 1px solid var(--line2); border-radius: 2px; flex: none }
+.library-trow.on .library-ck { background: var(--text); border-color: var(--text) }
+
+/* ---------- shelves: a wall of cases, each as wide as its books ---------- */
+.library-room { padding: 18px 22px 40px; min-height: 100%; display: flex; flex-direction: column }
+/* the filter line: the active facets as removable chips, clear, and n of N (nothing when no facet is set) */
+.library-filterline { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3) var(--s4); font: var(--fs-sm) var(--mono); margin-bottom: var(--s7); color: var(--dim) }
+.library-fchip { display: inline-flex; align-items: center; gap: 2px; background: var(--panel3); color: var(--text); border-radius: 99px; padding: 1px 2px 1px 9px }
+.library-fchip .iconbtn { width: 18px; height: 18px; color: var(--faint) }
+.library-link { border: 0; background: none; padding: 0; color: var(--faint); font: inherit; cursor: pointer; text-decoration: underline dotted #ffffff33; text-underline-offset: 3px }
+.library-link:hover { color: var(--text) }
+.library-count { margin-left: auto; display: inline-flex; gap: var(--s6); align-items: center; color: var(--faint) }
+.library-unknown { color: var(--faint) }
+.library-wall { display: flex; flex-wrap: wrap; gap: 18px 20px; align-items: stretch; align-content: flex-start; justify-content: flex-start }
+/* a case starts as wide as its books and as tall as its tallest spine; the cases of a row then
+   share out the row's spare width, so a wide screen never ends in an empty strip; the books sit
+   centred in the widened case (safe: an overflowing case still scrolls from its first book) */
+.library-case { flex: 1 1 auto; min-width: 0; max-width: 100%; display: flex; flex-direction: column; scroll-margin-top: 14px }
+/* the head wraps under a one-book case rather than widening it: the books set the width */
+.library-case-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) 9px; padding: 0 3px 8px; white-space: nowrap; width: min-content; min-width: 100% }
+.library-case-head .library-swatch { align-self: center }
+.library-case-head .t { font: 600 var(--fs-lg) var(--sans); color: var(--text) }
+.library-case-head .d { font: 500 var(--fs-cap) var(--mono); color: var(--faint); letter-spacing: .1em; text-transform: uppercase }
+.library-case-head .n { margin-left: auto; font: var(--fs-xs) var(--mono); color: var(--faint) }
+.library-readbar { display: inline-flex }
+.library-case-head .meter { width: 60px }
+.library-due { cursor: pointer }
+/* the back of the case: series side by side, wrapping onto more rows on a narrow pane; --sh = the case's
+   tallest spine, so every ledge in a row sits at one height and the tags hang level under it */
+.library-back {
+  flex: 1; display: flex; flex-wrap: wrap; align-items: flex-start; align-content: flex-start; justify-content: safe center; gap: 14px 12px; min-height: 0;
+  background: linear-gradient(180deg, #0f1012 0%, #131417 70%, #17171a 100%);
+  border-left: 3px solid #3a2c20; border-right: 3px solid #3a2c20; border-bottom: 3px solid #3a2c20; border-radius: 0 0 3px 3px;
+  box-shadow: inset 0 10px 24px -12px #000;
+  padding: 14px 14px 10px;
+}
+.library-series { display: flex; flex-direction: column; flex: none }
+.library-row { display: flex; align-items: flex-end; gap: var(--s1); height: var(--sh); padding: 0 3px }
+/* the ledge a series stands on: the old plank, one per series */
+.library-ledge {
+  height: 7px; border-radius: 0 0 2px 2px;
+  background: linear-gradient(180deg, #6a4f37 0%, #58412d 35%, #45321f 100%);
+  box-shadow: 0 1px 0 #7d5f43 inset, 0 6px 10px -6px #000c;
+}
+/* who must read each book, under it: one cell per spine, the same width, the same gap */
+.library-tags { display: flex; gap: var(--s1); padding: 5px 3px 0; min-height: 24px }
+.library-tcell { flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px }
+.library-tcell.dim, .library-spine.dim { opacity: .16 }
+.library-spine.dim:hover { opacity: .6 }
+.library-bares { display: flex; flex-wrap: wrap; gap: var(--s3) 22px; margin-top: 22px; padding-top: 12px; border-top: 1px dashed var(--line) }
+.library-bare-case { display: inline-flex; align-items: center; gap: var(--s4); font: var(--fs-md) var(--sans); color: var(--dim) }
+.library-bare-case .faint { font: var(--fs-xs) var(--mono) }
+
+.library-spine {
+  --c: #6a5a4a; position: relative; flex: none; border: 0; padding: 0; cursor: pointer;
+  border-radius: 2px 2px 0 0; display: flex; align-items: center; justify-content: center; overflow: hidden;
+  background:
+    linear-gradient(180deg, transparent 12px, #e9d7ae33 12px, #e9d7ae33 13px, transparent 13px, transparent calc(100% - 15px), #e9d7ae33 calc(100% - 15px), #e9d7ae33 calc(100% - 14px), transparent calc(100% - 14px)),
+    linear-gradient(90deg, #0000004d 0%, #ffffff14 22%, #ffffff05 50%, #00000033 80%, #00000066 100%),
+    var(--c);
+  filter: saturate(.8) brightness(.82);
+  transition: transform .12s ease, filter .12s ease;
+  box-shadow: 1px 0 0 #00000055;
+}
+.library-spine:hover { transform: translateY(-6px); filter: saturate(1) brightness(1) }
+.library-spine:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px }
+.library-spine-t {
+  writing-mode: vertical-rl; transform: rotate(180deg);
+  font: 500 var(--fs-xs)/1.1 var(--sans); color: #f1e6cc; letter-spacing: .02em;
+  max-height: calc(100% - 34px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  text-shadow: 0 1px 0 #0007;
+}
+/* a title too long for one line wraps to two (the spine is widened for it); a very long one also
+   takes smaller type. Never an ellipsis in the middle of a word */
+.library-spine-t.two { white-space: normal; overflow-wrap: anywhere; max-width: calc(100% - 4px); line-height: 1.05; text-align: center }
+.library-spine-t.tight { font-size: var(--fs-cap) }
+/* a reader tag (Tags.tsx): filled in the agent's category colour = boots with it; outlined = a Recall row
+   sends it there; neutral (.n: ALL, DSH-less groups, OD, ?) in the room's parchment; +n folds the rest */
+.library-tg {
+  --c: #d8c9a3; display: inline-grid; place-items: center; min-width: 21px; height: 14px; padding: 0 3px; border-radius: 3px; box-sizing: border-box;
+  font: 700 8px/1 var(--mono); letter-spacing: .02em; color: #0b0c0e; background: var(--c); cursor: default; flex: none
+}
+.library-tg.n { --c: #d8c9a3 }
+.library-tg.recall, .library-tg.demand { background: transparent; color: var(--c); box-shadow: inset 0 0 0 1.2px var(--c) }
+.library-tg.demand { --c: var(--dim) }
+.library-tg.none { background: transparent; box-shadow: inset 0 0 0 1px var(--line2) }
+.library-tg.more { background: transparent; color: var(--faint); box-shadow: none; font-weight: 500 }
+.library-tg.me { outline: 1.5px solid var(--text); outline-offset: 1px }
+.row .library-tg { min-width: 16px; height: 11px }
+
+/* a shelf's topics, under its head: neutral chips (topics wear no hue), the picked ones inverted */
+.library-topics { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 3px 9px 20px }
+.library-tp { font: var(--fs-xs) var(--mono); color: var(--dim); background: transparent; border: 1px solid var(--line2); border-radius: 99px; padding: 0 8px; height: 19px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px }
+.library-tp:hover { color: var(--text); border-color: var(--faint) }
+.library-tp .c { color: var(--faint) }
+.library-tp.on { background: var(--text); border-color: var(--text); color: var(--bg) }
+.library-tp.on .c { color: #0b0c0e99 }
+.library-tp.zero { opacity: .45 }
+.library-tp.untagged { border-style: dashed }
+.library-tp.bad { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent) }
+.library-spine.cold { filter: saturate(0) brightness(.45); opacity: .6 }
+.library-spine.cold:hover { filter: saturate(.3) brightness(.7) }
+.library-cold { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3) var(--s7); margin-top: var(--s8); padding-top: 10px; border-top: 1px dashed var(--line) }
+.library-cold .library-k { margin: 0 4px 0 0 }
+.library-cold-b { display: inline-flex; align-items: center; gap: var(--s4); font-size: var(--fs-md); color: var(--faint) }
+.library-cold-b .faint { font-size: var(--fs-xs) }
+
+/* the spine's hover card: the kit .pop, fixed under the pointer */
+.library-tip { position: fixed; z-index: 45; width: 320px; padding: 9px 11px; pointer-events: none }
+.library-tip-t { font: 600 var(--fs-md) var(--sans); color: var(--text); margin-bottom: 4px }
+.library-tip-w { font-size: var(--fs-md); color: var(--dim); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden }
+.library-tip-m { display: flex; gap: var(--s5); flex-wrap: wrap; margin-top: 7px; font: var(--fs-xs) var(--mono); color: var(--faint) }
+.library-tip-m .acc { color: var(--accent) }
+.library-tip-cold { margin-left: 8px; font-size: var(--fs-xs); font-weight: 400; color: var(--faint) }
+
+/* ---------- the book (drawer) ---------- */
+.library-meta { display: flex; align-items: center; gap: 7px; font: var(--fs-sm) var(--mono); color: var(--dim); flex-wrap: wrap }
+.library-meta .sep { color: var(--faint) }
+.library-when { margin-top: 2px }
+.library-when-t { font-size: var(--fs-lg); color: #d9cfb8; line-height: 1.55; border-left: 2px solid #6a4f37; padding: 2px 0 2px 11px }
+.library-when-t.clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer }
+.library-when-t.open { cursor: pointer }
+.library-badge { border: 0; background: none; padding: 0; cursor: pointer; display: inline-flex }
+.library-badge:hover .glyph { border-color: var(--accent); color: var(--accent) }
+.library-who { margin-top: var(--s3) }
+.library-use { display: flex; gap: 7px; align-items: baseline; font-size: var(--fs-sm); color: var(--dim); flex-wrap: wrap }
+.library-use b { color: var(--text); font-weight: 600 }
+.library-use .sep { color: var(--faint) }
+.library-never { display: inline-flex; align-items: center; gap: 5px; color: var(--faint) }
+.library-reads { margin-top: var(--s4); max-height: 150px; overflow: auto }
+.library-read-row { display: flex; gap: var(--s5); padding: 3px 10px; font-size: var(--fs-xs) }
+.library-read-row .a { color: var(--dim); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.library-read-row .c { width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.library-texthead { display: flex; align-items: center; justify-content: space-between; margin-top: var(--s8); border-top: 1px solid var(--line); padding-top: 4px }
+.library-texthead .library-k { margin: 10px 0 6px }
+.library-ro { font-size: var(--fs-xs) }
+.library-text { margin-top: var(--s8); padding-top: 4px; border-top: 1px solid var(--line) }
+.library-texthead + .library-text { margin-top: 0; border-top: 0 }
+.library-hist-row { display: flex; gap: var(--s5); align-items: baseline; padding: 5px 10px; font-size: var(--fs-md) }
+.library-hist-row .sha { color: var(--accent); font-size: var(--fs-sm); flex: none }
+.library-hist-row .subj { flex: 1; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.library-hist-row .faint { font-size: var(--fs-xs); flex: none; width: 34px; text-align: right }
+.library-hist-row .who { font-size: var(--fs-xs); color: var(--dim); flex: none; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.library-edit { display: flex; flex-direction: column; gap: var(--s4) }
+.library-edit-t { width: 100%; min-height: 52vh; resize: vertical; background: var(--bg2); color: var(--text); border: 1px solid var(--line2); border-radius: 6px; padding: 10px 12px; font-size: var(--fs-md); line-height: 1.55; box-sizing: border-box; tab-size: 2 }
+.library-edit-t:focus { outline: none; border-color: var(--accent-line) }
+.library-edit-bar { display: flex; gap: var(--s4); align-items: center }
+.library-edit-bar .input { flex: 1; min-width: 0; height: 26px; font-size: var(--fs-md) }
+.library-edit-err { font-size: var(--fs-sm); word-break: break-word }
+
+/* the drawer's facts: topics, boot (with + boot), every Recall row that names the book */
+.library-facts { display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 9px 12px; margin-top: 16px; align-items: baseline }
+.library-facts .k { margin: 0 }
+.library-facts .v { min-width: 0; font-size: var(--fs-md); color: var(--dim) }
+.library-facts .chips { display: flex; flex-wrap: wrap; gap: 5px; align-items: center }
+.library-addboot { height: 20px; border: 1px dashed var(--line2); border-radius: 99px; background: transparent; color: var(--faint); font: var(--fs-xs) var(--mono); padding: 0 6px; cursor: pointer }
+.library-addboot:hover { color: var(--text); border-color: var(--faint) }
+.library-addboot option { background: var(--panel); color: var(--text) }
+.library-rc { border-left: 2px solid var(--line2); padding: 1px 0 1px 9px; margin-bottom: 8px }
+.library-rc .f { font-size: var(--fs-xs); color: var(--text) }
+.library-rc .m { font-size: var(--fs-sm); line-height: 1.45 }
+.library-rc .w { font: var(--fs-xs) var(--mono) }
+
+/* ---------- readers: the must-read books, one line each ---------- */
+.library-rd { max-width: 1100px; margin-bottom: 14px }
+.library-rd-sh { display: flex; align-items: center; gap: 7px; padding: 8px 12px 6px; border-bottom: 1px solid var(--line) }
+.library-rd-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 14px; width: 100%; border: 0; border-bottom: 1px solid var(--line); background: none; padding: 8px 12px; text-align: left; cursor: pointer; color: inherit; font: inherit }
+.library-rd-row:last-child { border-bottom: 0 }
+.library-rd-row:hover { background: var(--panel) }
+.library-rd-row .t { font-size: var(--fs-md); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.library-rd-row:hover .t { color: var(--accent) }
+.library-rd-row .n { font: var(--fs-xs) var(--mono); color: var(--faint); text-align: right }
+.library-rd-row .tags { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px }
+.library-rd-row .tags .k { font: var(--fs-xs) var(--mono); color: var(--faint); margin: 0 2px 0 10px }
+.library-rd-row .tags .k:first-child { margin-left: 0 }
+.library-rd-row .tags .f { font: var(--fs-xs) var(--mono); color: var(--faint); margin-left: 6px }
+
+/* ---------- agents ---------- */
+.library-agents { display: grid; grid-template-columns: 230px minmax(0, 1fr); height: 100% }
+.library-alist { border-right: 1px solid var(--line); overflow: auto; padding: 6px 0 30px; background: var(--bg2) }
+.library-dept { padding: 12px 14px 4px }
+.library-arow { gap: 9px; padding: 6px 14px }
+.library-arow.on { box-shadow: inset 2px 0 0 var(--accent) }
+.library-arow.dormant .nm { color: var(--faint) }
+.library-apanel { overflow: auto; padding: 18px 24px 60px; min-width: 0 }
+.library-apanel > * { max-width: 860px }
+.library-ahead { display: flex; align-items: center; gap: 9px }
+.library-aname { font: 600 var(--fs-xl) var(--sans); color: var(--text); margin-right: 4px }
+.library-brief { position: relative; max-height: 220px; overflow: hidden; border: 1px solid var(--line); border-radius: 6px; padding: 4px 14px; font-size: var(--fs-md); cursor: pointer }
+.library-brief.open { max-height: none; cursor: default }
+.library-brief-fade { position: absolute; left: 0; right: 0; bottom: 0; height: 64px; background: linear-gradient(transparent, var(--bg)); pointer-events: none }
+.library-brief-less { position: absolute; right: 6px; bottom: 6px; font-size: var(--fs-xs) }
+.library-budget { display: flex; align-items: center; gap: var(--s6); margin-top: var(--s7); font-size: var(--fs-sm); color: var(--dim) }
+.library-blist { background: var(--panel) }
+.library-brow { display: flex; align-items: center; gap: var(--s5); padding: 8px 10px 8px 12px }
+.library-brow:hover { background: #ffffff05 }
+.library-brow .n { width: 16px; font-size: var(--fs-xs); color: var(--faint); text-align: right; flex: none }
+.library-brow .main { flex: 1; min-width: 0; border: 0; background: none; padding: 0; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 1px; color: inherit; font: inherit }
+.library-brow .main:disabled { cursor: default }
+.library-brow .t { color: var(--text); font-size: var(--fs-lg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.library-brow .main:hover:not(:disabled) .t { color: var(--accent) }
+.library-brow .w { color: var(--faint); font-size: var(--fs-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.library-brow .k { font-size: var(--fs-sm); color: var(--dim); width: 38px; text-align: right; flex: none }
+.library-brow.missing .t { color: var(--fail) }
+.library-brow .x { flex: none }
+.library-pick { position: relative }
+.library-pick-list { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 20; max-height: 340px; overflow: auto; padding: 4px 0 }
+.library-pick-row .t { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.library-pick-row .tag { max-width: 150px; overflow: hidden; text-overflow: ellipsis }
+.library-pick-row .k { font-size: var(--fs-xs); color: var(--faint); width: 36px; text-align: right }
+.library-pick-close { display: block; margin: 4px 10px 2px auto; border: 0; background: none; color: var(--faint); font: var(--fs-xs) var(--mono); cursor: pointer }
+
+/* ---------- +/- : a diverging bar, harmful left (red), helpful right (green) ---------- */
+.library-pm { display: inline-flex; align-items: center; gap: 5px; vertical-align: middle }
+.library-pm .bar { display: flex; width: 44px; height: 7px; border: 1px solid var(--line2); border-radius: 2px; overflow: hidden; background: var(--panel) }
+.library-pm .bar > span { flex: 1; display: flex; min-width: 0 }
+.library-pm .bar .l { justify-content: flex-end; border-right: 1px solid var(--dim) }
+.library-pm .bar .l i { background: var(--fail); display: block; height: 100% }
+.library-pm .bar .r i { background: var(--ok); display: block; height: 100% }
+.library-pm .n { font: var(--fs-cap) var(--mono); color: var(--faint); min-width: 12px; text-align: left }
+.library-pm.thin .bar { border-style: dashed; background: none }
+.library-pm.thin .bar i { opacity: .55 }
+.library-pm.none { font: var(--fs-xs) var(--mono); color: var(--faint); width: 62px; display: inline-block; text-align: center }
+
+/* ---------- full-text hits ---------- */
+.library-hits { gap: var(--s1); max-width: 980px }
+.library-hit { display: flex; flex-direction: column; gap: var(--s2); width: 100%; border: 0; border-bottom: 1px solid var(--line); background: none; padding: 9px 10px; text-align: left; cursor: pointer; color: inherit; font: inherit; border-radius: 0 }
+.library-hit:hover { background: var(--panel) }
+.library-hit-h { display: flex; align-items: center; gap: 9px; min-width: 0 }
+.library-hit-h .t { color: var(--text); font-size: var(--fs-lg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.library-hit:hover .library-hit-h .t { color: var(--accent) }
+.library-hit-h .tag { max-width: 220px; overflow: hidden; text-overflow: ellipsis }
+.library-hit-h .n { margin-left: auto; font-size: var(--fs-xs); color: var(--faint); flex: none }
+.library-hit-s { color: var(--dim); font-size: var(--fs-md); line-height: 1.5; padding-left: 17px }
+.library-hit-s mark { background: #d9b35b2e; color: var(--accent); border-radius: 2px; padding: 0 1px }
+
+/* ---------- Retire? and Links: fixed-column rows in a kit list box ---------- */
+.library-rt, .library-dr { padding: var(--s7) 22px 40px; max-width: 1100px }
+.library-rt-head { display: flex; gap: 18px; align-items: baseline; font-size: var(--fs-sm); color: var(--dim); margin-bottom: 14px; flex-wrap: wrap }
+.library-rt-head b { color: var(--text); font-weight: 600 }
+.library-rt-head .ok b { color: var(--ok) }
+.library-rt-head .fail b { color: var(--fail) }
+.library-rt-row { display: grid; grid-template-columns: minmax(0, 1fr) 52px 78px 56px 70px 160px; align-items: center; gap: var(--s5); padding: 0 10px; min-height: 34px; font-size: var(--fs-md) }
+.library-rt-row:hover:not(.lbox-hd) { background: var(--panel) }
+.library-rt-row.lbox-hd, .library-lk-row.lbox-hd { min-height: 26px }
+.library-rt-row .t { border: 0; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; display: flex; align-items: center; gap: var(--s4); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 }
+.library-rt-row .t:hover { color: var(--accent) }
+.library-rt-row .c { text-align: right; font-size: var(--fs-sm); color: var(--dim) }
+.library-rt-row .c.t-fail { color: var(--fail) }
+.library-rt-row .a { display: flex; gap: var(--s3); justify-content: flex-end }
+.library-rt-row.arm { background: #2a151514; box-shadow: inset 2px 0 0 var(--fail) }
+.library-rt-row.cold { grid-template-columns: minmax(0, 1fr) auto 160px }
+.library-rt-row.cold .t { color: var(--faint) }
+.library-rt-cold { font-size: var(--fs-xs) }
+.library-rt-why { justify-self: start }
+.library-rt-note { padding: 7px 10px; font-size: var(--fs-xs) }
+.library-lk-chip { gap: var(--s3) }
+.library-lk-row { display: grid; grid-template-columns: minmax(0, 1fr) 96px 44px 64px; align-items: center; gap: var(--s5); padding: 0 10px; min-height: 32px; font-size: var(--fs-md) }
+.library-lk-row:hover:not(.lbox-hd) { background: var(--panel) }
+.library-lk-row .a { display: flex; justify-content: flex-end }
+.library-lk-p { display: flex; gap: var(--s5); align-items: baseline; min-width: 0; overflow: hidden; white-space: nowrap; font-size: var(--fs-sm) }
+.library-lk-path, .library-lk-who { overflow: hidden; text-overflow: ellipsis; color: var(--text) }
+.library-lk-who { color: var(--dim) }
+.library-lk-miss { color: var(--fail); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--fail) 50%, transparent); overflow: hidden; text-overflow: ellipsis }
+.library-lk-f { width: 88px; justify-content: center }
+.library-lk-s { display: flex; justify-content: center }
+
+/* ---------- drafts ---------- */
+.library-dr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--s6) }
+.library-dr-card { display: flex; flex-direction: column; gap: var(--s3); background: var(--bg2) }
+.library-dr-top { display: flex; align-items: center; gap: var(--s4); font-size: var(--fs-sm); color: var(--dim) }
+.library-dr-top .faint { margin-left: auto; font-size: var(--fs-xs) }
+.library-dr-shelf { color: var(--dim) }
+.library-dr-lvl { font-size: var(--fs-cap); letter-spacing: .08em; text-transform: uppercase; color: var(--faint) }
+.library-dr-who { display: inline-flex }
+.library-dr-t { font: 600 var(--fs-lg) var(--sans); color: var(--text) }
+.library-dr-p { font-size: var(--fs-md); color: var(--dim); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden }
+.library-dr-when { font-size: var(--fs-sm); color: #d9cfb8; border-left: 2px solid #6a4f37; padding-left: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.library-dr-bar { display: flex; gap: var(--s3); margin-top: 2px }
+.library-dr-in { width: 100%; font-size: var(--fs-sm) }
+
+/* ---------- chapters (B-0372): the type control, the over-size mark, copy ref, the marked chapter, hit chapters, the layers line ---------- */
+.library-type { display: inline-flex; flex: none }
+.library-over { margin-left: 6px; padding: 0 5px; border-radius: var(--r-pill); font: 600 var(--fs-cap) var(--mono); color: var(--warn); background: var(--panel3); cursor: help }
+.library-over.fail { color: var(--fail) }
+.library-copy { margin-left: 8px; font: var(--fs-xs) var(--mono) }
+.library-ch { border: 0; background: none; padding: 0; color: inherit; font: inherit; cursor: pointer }
+.library-ch:hover { color: var(--accent) }
+.library-rc.cur { border-left-color: var(--accent) }
+.library-text .library-chmark { box-shadow: -10px 0 0 -8px var(--accent); border-left: 2px solid var(--accent); padding-left: 10px; margin-left: -12px }
+.library-hit-ch { color: var(--dim); font-size: var(--fs-md); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0 }
+.library-hit-ch::before { content: '> '; color: var(--faint) }
+.library-chn { margin-left: 10px; font: var(--fs-xs) var(--mono); color: var(--accent) }
+.library-rd-row.sub { padding-left: 32px }
+.library-rd-row.sub .t::before { content: '\21B3  '; color: var(--faint) }
+.library-spine.sub { margin-left: 8px; border-top: 3px solid #e9d7ae66 }
+.library-layers { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: var(--s4); font-size: var(--fs-xs); color: var(--dim) }
+.library-layers b { margin-left: auto; color: var(--text); font-weight: 600 }

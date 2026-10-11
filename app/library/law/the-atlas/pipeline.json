@@ -1,0 +1,110 @@
+{
+  "$comment": "The trading pipeline, front to back: the stages the MAP room's Pipeline view draws. Owned by the fund agent. `status` is the stage's standing: live | human | scaffold | missing | external. `evidence` names the fund-relative paths that fill the stage; the room checks each one exists and paints the stage red when a named path is gone, so a stage cannot claim code that was deleted. A missing stage names no evidence. `holds` is the short list the stage box shows. Standard: the buy-side front-to-back chain (market data, reference, signal, decide, risk, OMS, execution, venue, post-trade) and the loop back into signal. Restated for this repo: no venue adapters, engines or execution layer ship, so those stages name no evidence until they are built.",
+  "stages": [
+    {
+      "id": "market-data",
+      "name": "Market data",
+      "status": "scaffold",
+      "holds": [
+        "lake + catalog",
+        "pacer, cache, pins",
+        "no venue adapters yet"
+      ],
+      "evidence": [
+        "database/py/fund_db/market",
+        "database/py/fund_db/pacer.py"
+      ]
+    },
+    {
+      "id": "reference",
+      "name": "Reference",
+      "status": "missing",
+      "holds": [
+        "fees, intervals",
+        "venue facts"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "signal",
+      "name": "Signal",
+      "status": "scaffold",
+      "holds": [
+        "research notebooks",
+        "chart bank",
+        "lab loop"
+      ],
+      "evidence": [
+        "platform/research",
+        "app/loop/tools"
+      ]
+    },
+    {
+      "id": "decide",
+      "name": "Decide",
+      "status": "human",
+      "holds": [
+        "the owner",
+        "no portfolio construction yet"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "risk",
+      "name": "Risk",
+      "status": "missing",
+      "holds": [
+        "limits, exposure",
+        "pre-trade checks"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "oms",
+      "name": "Orders (OMS)",
+      "status": "missing",
+      "holds": [
+        "order book",
+        "states, audit"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "execution",
+      "name": "Execution",
+      "status": "missing",
+      "holds": [
+        "owner-armed only",
+        "no venue keys"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "venue",
+      "name": "Venue",
+      "status": "external",
+      "holds": [
+        "fills"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "post-trade",
+      "name": "Post-trade",
+      "status": "missing",
+      "holds": [
+        "positions, recon",
+        "live P&L split"
+      ],
+      "evidence": []
+    }
+  ],
+  "loop": {
+    "from": "post-trade",
+    "to": "signal",
+    "label": "results -> retro -> beliefs",
+    "evidence": [
+      "app/loop/tools"
+    ]
+  }
+}

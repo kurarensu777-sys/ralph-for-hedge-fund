@@ -1,0 +1,215 @@
+/* ROOM: lab. Layout and the room's own charts only: tables, tags, pills, cards, fields, code and
+   states are the kit's (src/styles.css). */
+.lab-main { display: flex; flex-direction: column; min-height: 100%; --k-explore: var(--ask); --k-wild: #a98bf5 }
+
+/* ---- the run table (kit .tbl), denser than the default, with the room's side gutter ---- */
+.lab-tbl { font-size: var(--fs-md); --k-explore: var(--ask); --k-wild: #a98bf5 }
+.lab-tbl td { padding: 5px 6px; white-space: nowrap }
+.lab-tbl th { padding: 7px 6px }
+.lab-tbl td:first-child, .lab-tbl th:first-child { padding-left: var(--gutter) }
+.lab-tbl td:last-child, .lab-tbl th:last-child { padding-right: var(--s7) }
+.lab-th { cursor: pointer; user-select: none }
+.lab-th:hover, .lab-th.on { color: var(--dim) }
+.lab-ck { width: 36px; padding-right: 0 !important; vertical-align: middle; line-height: 0 }
+.lab-desk { max-width: 150px; overflow: hidden; text-overflow: ellipsis; color: var(--dim) }
+.lab-band { color: var(--dim); max-width: 120px; overflow: hidden; text-overflow: ellipsis }
+.lab-win { color: var(--dim); max-width: 190px; overflow: hidden; text-overflow: ellipsis; font-size: var(--fs-sm) }
+/* WINDOW: a bar on the shown rows' one time axis, then the window's length */
+.lab-wbar { position: relative; display: inline-block; width: 72px; height: 7px; vertical-align: middle }
+.lab-wbar::before { content: ''; position: absolute; left: 0; right: 0; top: 3px; height: 1px; background: var(--line2) }
+.lab-wbar i { position: absolute; top: 0; bottom: 0; border-radius: 2px; background: var(--dim) }
+.lab-wbar i.clip { border-radius: 0 2px 2px 0; background: linear-gradient(90deg, transparent, var(--dim) 10px) }
+tr:hover .lab-wbar i { background: var(--text) }
+tr:hover .lab-wbar i.clip { background: linear-gradient(90deg, transparent, var(--text) 10px) }
+.lab-wspan { display: inline-block; min-width: 5ch; margin-left: 7px; font: var(--fs-xs) var(--mono); color: var(--faint); vertical-align: middle; font-variant-numeric: tabular-nums }
+.lab-kind { font: 500 var(--fs-xs) var(--mono); color: var(--faint) }
+/* kind tokens (explore blue, wild violet): explore and wild are tinted kit tags */
+.lab-kchip { height: 16px }
+.lab-kchip.k-explore { --mk: var(--k-explore) } .lab-kchip.k-wild { --mk: var(--k-wild) }
+.lab-void td { opacity: .55 }
+/* below 1600px BAND and KIND fold away; the kind rides as a tiny mark on the RUN cell */
+.lab-kico { display: none; margin-right: 4px; vertical-align: -2px; color: var(--faint) }
+.lab-kico .ico { width: 11px; height: 11px }
+.lab-kico.k-explore { color: var(--k-explore) } .lab-kico.k-wild { color: var(--k-wild) }
+@media (max-width: 1599px) {
+  .lab-tbl .lab-wide { display: none }
+  .lab-kico { display: inline-block }
+  .lab-tbl .lab-desk { max-width: 118px }
+  .lab-wbar { width: 56px }
+  .lab-tbl td, .lab-tbl th { padding-left: 5px; padding-right: 5px }
+}
+/* READS: three heat cells (at run, +7d, +30d), no wider than the header */
+.lab-rd { white-space: nowrap; line-height: 0 }
+.lab-rd .heat { --hc: 9px; gap: 2px }
+.lab-rd .heat i { height: 11px; border-radius: 2px }
+/* VERIFY: a green dot and the check count on a full pass; passed/total in red on any miss */
+.lab-vcell { white-space: nowrap; width: 9ch }
+.lab-vn { display: inline-flex; align-items: center; justify-content: flex-end; gap: 5px; min-width: 6ch; font-variant-numeric: tabular-nums; color: var(--dim) }
+.lab-vn.ok { color: var(--dim) }
+.lab-vn.bad { color: var(--fail) }
+.lab-vn.off { color: var(--faint) }
+/* the desk's owner colour, before the desk name */
+.lab-dchip { display: inline-block; width: 7px; height: 7px; border-radius: 2px; margin-right: 6px; vertical-align: 0; flex: none }
+/* thin day headers group the runs by date (the default sort) */
+.lab-tbl tr.lab-dayrow td { padding-top: 9px; padding-bottom: 3px; border-bottom: 1px solid var(--line); background: transparent; cursor: default; font: 600 var(--fs-cap) var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint) }
+.lab-tbl tr.lab-dayrow:hover td { background: transparent }
+.lab-dday { color: var(--dim) }
+.lab-dwd { margin-left: 8px }
+.lab-dn { margin-left: 10px; font-weight: 500; letter-spacing: .04em; text-transform: none }
+.lab-stcell { white-space: nowrap }
+.lab-hsel { width: auto; padding: 3px 6px; font: var(--fs-sm) var(--mono) }
+.lab-hsel.on { border-color: #d9b35b77; color: var(--accent) }
+.lab-small { font-size: var(--fs-xs) }
+
+/* window fingerprint: hash chip, link (shared window), cut (missing head) */
+.lab-fpcell { white-space: nowrap }
+.lab-fp { display: inline-flex; align-items: center; gap: var(--s2) }
+.lab-hash { font: 500 var(--fs-xs) var(--mono); color: var(--dim); padding: 0 4px; border: 1px solid var(--line); border-radius: var(--r-xs); background: #ffffff05; letter-spacing: .02em }
+.lab-flag { display: inline-grid; place-items: center; width: 14px; height: 14px }
+.lab-g { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round }
+.lab-linkd { color: var(--dim) }
+.lab-cut { color: var(--warn) }
+.lab-pinned { color: var(--faint) }
+.lab-unpin { color: var(--warn) }
+.lab-same { color: var(--warn); font: var(--fs-sm) var(--mono) }
+
+/* trials: DSR / PBO tags, the hover scatter (kit .pop), the drawer's counts */
+.lab-tcell { white-space: nowrap }
+.lab-tchips { display: inline-flex; gap: var(--s2); cursor: default }
+.lab-tpop { position: fixed; z-index: 45; width: 228px; padding: 7px 8px 6px; pointer-events: none }
+.lab-tpop-h { display: flex; justify-content: space-between; font: 600 var(--fs-cap) var(--mono); letter-spacing: .1em; color: var(--dim); margin-bottom: 2px }
+.lab-tpop-e { padding: 12px 0 }
+.lab-scat { display: block }
+.lab-sdot { fill: var(--faint); opacity: .55 }
+.lab-sbest { fill: var(--accent) }
+.lab-tsec { display: flex; flex-direction: column; gap: var(--s3) }
+.lab-trow { display: flex; gap: var(--s3); align-items: center }
+.lab-tn { font: var(--fs-xs) var(--mono); color: var(--faint); margin-left: 4px }
+.lab-tgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s4) }
+.lab-tcell2 { display: grid; grid-template-columns: auto 1fr; align-items: baseline; column-gap: var(--s3); row-gap: 5px; padding: 7px 9px }
+.lab-tcell2 .meter, .lab-tstack { grid-column: 1 / -1 }
+.lab-tv { font: 600 var(--fs-xl) var(--mono); color: var(--text); font-variant-numeric: tabular-nums }
+.lab-tk { font: 600 var(--fs-cap) var(--mono); letter-spacing: .1em; color: var(--faint); text-transform: uppercase }
+.lab-tstack { display: flex; gap: 2px; height: 5px }
+.lab-tstack i { display: block; min-width: 3px; border-radius: 2px; background: var(--line3) }
+.lab-tstack i.st-kept { background: var(--ok) } .lab-tstack i.st-abandoned { background: var(--off) } .lab-tstack i.st-rerun { background: var(--warn) }
+
+/* ---- the explorer: desks with a 7-day sparkbar, reads due as small kit cards ---- */
+.lab-drow { gap: 7px }
+.lab-ddot { width: 7px; height: 7px; border-radius: 50%; flex: none }
+.lab-ddot.all { background: transparent; border: 1px solid var(--faint); width: 5px; height: 5px }
+.lab-spark { display: inline-flex; align-items: flex-end; gap: var(--s1); height: 15px; flex: none }
+.lab-spark i { display: block; width: 4px; height: 2px; border-radius: 1px; background: var(--line2) }
+/* a day with runs: the desk's own category colour (the row's dot), softened; today at full strength */
+.lab-spark i.on { background: var(--c, var(--dim)); opacity: .55 }
+.lab-drow.on .lab-spark i.on, .lab-drow:hover .lab-spark i.on { opacity: .75 }
+.lab-spark i.on:last-child, .lab-drow.on .lab-spark i.on:last-child, .lab-drow:hover .lab-spark i.on:last-child { opacity: 1 }
+.lab-quiet { padding: 3px 12px; color: var(--faint); font-size: var(--fs-sm) }
+/* a desk row's flags: retro due (an amber ring), reads overdue (a toned count) */
+.lab-rflag { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--warn); flex: none; box-sizing: border-box }
+.lab-oflag { min-width: 14px; height: 14px; padding: 0 4px }
+/* reads due: one line each - dot, run, age, desk, overdue days */
+.lab-rrow { gap: 6px }
+.lab-rr-run { color: var(--text); font-size: var(--fs-sm); flex: none }
+.lab-rr-age { font: var(--fs-xs) var(--mono); color: var(--faint); flex: none }
+.lab-rr-desk { font: var(--fs-xs) var(--mono); color: var(--faint) !important }
+.lab-cd { margin-left: auto }
+
+/* ---- the KPI tiles over the table ---- */
+.lab-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s5); padding: var(--s5) var(--gutter); border-bottom: 1px solid var(--line) }
+.lab-kpi { display: flex; align-items: center; justify-content: space-between; gap: var(--s5); padding: 7px 10px; min-height: 46px }
+.lab-kpi-t { display: flex; flex-direction: column; gap: 1px; min-width: 0 }
+.lab-kpi-v { font: 600 var(--fs-xl) var(--mono); color: var(--text); line-height: 1.1; font-variant-numeric: tabular-nums }
+.lab-kpi-k { font: 600 var(--fs-cap) var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); white-space: nowrap }
+.lab-kpi-q { color: var(--off) }
+.lab-kpi-m { display: flex; align-items: flex-end; min-width: 0 }
+.lab-kbars { display: inline-flex; align-items: flex-end; gap: 3px; height: 24px }
+.lab-kbars i { display: block; width: 6px; height: 2px; border-radius: 1px; background: var(--line2) }
+.lab-kbars i.on { background: var(--dim) }
+.lab-kbars i.on:last-child { background: var(--accent) }
+.lab-kdots, .lab-kgrid { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; gap: 3px; max-width: 110px }
+.lab-kdots i { width: 8px; height: 8px; border-radius: 50% }
+.lab-kdots i.late { background: var(--fail) } .lab-kdots i.over { background: var(--warn) } .lab-kdots i.ahead { border: 1px solid var(--faint) }
+.lab-kgrid i { width: 8px; height: 8px; border-radius: 2px }
+.lab-kgrid i.ok { background: color-mix(in srgb, var(--ok) 55%, transparent) } .lab-kgrid i.due { background: var(--warn) }
+
+/* ---- the desk strip: results chart + mechanic stages ---- */
+.lab-strip { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: var(--s7); padding: var(--s5) var(--gutter); border-bottom: 1px solid var(--line) }
+.lab-side { min-width: 0; display: flex; flex-direction: column; gap: var(--s5) }
+.lab-chart, .lab-mech, .lab-tl { min-width: 0; display: flex; flex-direction: column; gap: var(--s2) }
+.lab-chart .empty:not(.inline) { min-height: 120px }
+.lab-tl .empty:not(.inline) { min-height: 60px }
+.lab-tl-plot { min-height: 0 }
+/* the reads timeline: a lane per run, dots toned like the READS heat cells, today a dashed accent line */
+.lab-tl-lane { stroke: var(--line2); stroke-width: 1 }
+.lab-tl-now { stroke: var(--accent); stroke-width: 1; stroke-dasharray: 2 2; opacity: .8 }
+.lab-tl-run { fill: var(--dim) }
+.lab-tl-d { stroke-width: 1.2 }
+.lab-tl-d.ok { fill: var(--ok) } .lab-tl-d.due { fill: var(--warn) } .lab-tl-d.late, .lab-tl-d.missed { fill: var(--fail) }
+.lab-tl-d.ahead { fill: var(--bg); stroke: var(--dim) } .lab-tl-d.off { fill: var(--bg); stroke: var(--line3) }
+.lab-tl-k { display: inline-block; width: 7px; height: 7px; border-radius: 50% }
+.lab-tl-k.ok { background: var(--ok) } .lab-tl-k.due { background: var(--warn) } .lab-tl-k.late { background: var(--fail) } .lab-tl-k.ahead { border: 1px solid var(--dim) }
+.lab-chart-head { display: flex; align-items: center; gap: var(--s5); min-height: 24px }
+.lab-msel { width: auto; max-width: 220px; padding: 2px 6px; font: var(--fs-sm) var(--mono) }
+.lab-legend { margin-left: auto; display: flex; gap: var(--s5); font: var(--fs-xs) var(--mono); color: var(--faint) }
+.lab-legend span { display: inline-flex; align-items: center; gap: var(--s2) }
+.lab-lg-band { display: inline-block; width: 6px; height: 11px; border-radius: 2px; background: #d9b35b33; border: 1px solid var(--accent-line) }
+.lab-lg-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--dim) }
+.lab-lg-dot.hit { background: var(--ok) } .lab-lg-dot.miss { background: var(--fail) }
+.lab-lg-read { display: inline-block; width: 6px; height: 6px; border-radius: 50%; border: 1px solid var(--dim) }
+.lab-plot { width: 100%; min-height: 150px }
+.lab-plot svg { display: block }
+.lab-grid { stroke: var(--line); stroke-width: 1 }
+.lab-zero { stroke: var(--line2); stroke-width: 1; stroke-dasharray: 3 3 }
+.lab-tick { font: var(--fs-cap) var(--mono); fill: var(--faint) }
+.lab-hit-area { fill: transparent }
+.lab-hit-area:hover { fill: #ffffff08 }
+.lab-bandr { fill: #d9b35b2a; stroke: var(--accent-line); stroke-width: 1 }
+.lab-bandr.open { stroke-dasharray: 2 2 }
+.lab-meas { fill: var(--dim) }
+.lab-meas.hit { fill: var(--ok) } .lab-meas.miss { fill: var(--fail) }
+.lab-readm { fill: none; stroke: var(--dim); stroke-width: 1 }
+.lab-pvoid { opacity: .4 }
+.lab-mtbl { font-size: var(--fs-sm) }
+.lab-mtbl td { padding: 2px 6px; white-space: nowrap }
+.lab-mname { max-width: 0; width: 100%; overflow: hidden; text-overflow: ellipsis }
+.lab-mstage { width: 84px }
+.lab-ssel { padding: 1px 4px; font: var(--fs-xs) var(--mono); width: 78px }
+.lab-ssel.s-paper { color: var(--accent) } .lab-ssel.s-unset { color: var(--faint) }
+
+/* ---- the run drawer ---- */
+.lab-detail { display: flex; flex-direction: column; gap: var(--s3) }
+.lab-link { font-size: var(--fs-xs) }
+.lab-cmp td { vertical-align: top; font-size: var(--fs-md) }
+.lab-cmp td:first-child { white-space: nowrap; width: 100px }
+/* reads */
+.lab-read { margin-top: 4px; margin-bottom: 6px }
+.lab-read-row { display: flex; align-items: center; gap: var(--s4); font-size: var(--fs-md) }
+.lab-read-sp { flex: 1 }
+.lab-read-st { font: var(--fs-xs) var(--mono); color: var(--dim); display: inline-flex; align-items: center; gap: 5px }
+.lab-read-note { font-size: var(--fs-xs) }
+.lab-tail { margin-top: 4px; font-size: var(--fs-xs) }
+/* folded drawer sections (results-log text, raw rows) */
+.lab-fold-b { border: 0; background: none; padding: 0; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: var(--s2) }
+.lab-fold-b:hover:not(:disabled) { color: var(--text) }
+.lab-fold-b:disabled { cursor: default }
+.lab-chev { display: inline-block; width: 9px }
+.lab-fold-e { font: var(--fs-xs) var(--mono); letter-spacing: 0; text-transform: none }
+
+/* ---- the pre-register form (kit .field) ---- */
+.lab-form { display: flex; flex-direction: column; gap: var(--s4) }
+.lab-form .field > .seg { align-self: flex-start }
+.lab-frow { display: flex; gap: var(--s4); align-items: flex-end }
+.lab-f-grow { flex: 1 }
+.lab-f-run { width: 90px }
+.lab-f-num { width: 70px }
+.lab-mhint { font-size: var(--fs-sm); display: flex; gap: var(--s3); align-items: baseline; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.lab-pair { display: flex; gap: var(--s3); align-items: center }
+.lab-pair input:first-child { width: 36% }
+.lab-add { align-self: flex-start; font: var(--fs-sm) var(--mono); padding: 2px 0 }
+.lab-fsel { width: auto; height: 20px; padding: 0 6px; font: var(--fs-xs) var(--mono); border-radius: var(--r-pill) }
+.lab-fsel.on { border-color: var(--accent-line); color: var(--accent) }
+.lab-more summary { cursor: pointer; font: 600 var(--fs-cap) var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint) }
+.lab-more[open] { display: flex; flex-direction: column; gap: var(--s4) }
+.lab-factions { display: flex; gap: var(--s4); justify-content: flex-end; margin-top: 4px }
+.lab-refused { border-color: var(--fail-line) }

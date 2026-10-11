@@ -1,0 +1,267 @@
+{
+  "$comment": "The data flow, top down: the layers the MAP room's Data view draws. Written by the app agent for the cockpit (the on-demand data plan); the fund agent may adopt it as law. `status` is a box's standing: live | building | planned | external | off. `evidence` names the fund-relative paths that prove the box exists; the room checks each one and paints the box red when a named path is gone, so a box cannot claim code that was deleted. A box shows at most two short `sub` lines and no counts that rot. `edges` join a layer or a box to another (`from`/`to` are layer ids or box ids); kind `uses` is a dotted side flow. Keep it in step with app/library/law/how-we-guard.md#data-the-four-classes.",
+  "layers": [
+    {
+      "id": "sources",
+      "name": "Sources",
+      "layout": "row",
+      "nodes": [
+        {
+          "id": "crypto",
+          "name": "Crypto venues",
+          "kind": "external",
+          "status": "external",
+          "sub": [
+            "exchanges and dexes"
+          ]
+        },
+        {
+          "id": "broker",
+          "name": "Broker gateway",
+          "kind": "external",
+          "status": "external",
+          "sub": [
+            "owner's login, read-only"
+          ]
+        },
+        {
+          "id": "session",
+          "name": "Data session",
+          "kind": "external",
+          "status": "external",
+          "sub": [
+            "owner's cookie, data only"
+          ]
+        },
+        {
+          "id": "rates",
+          "name": "Public rates",
+          "kind": "external",
+          "status": "external",
+          "sub": [
+            "central banks, treasuries"
+          ]
+        },
+        {
+          "id": "bars",
+          "name": "Bar vendors",
+          "kind": "external",
+          "status": "external",
+          "sub": [
+            "daily and hourly bars"
+          ]
+        },
+        {
+          "id": "predmkts",
+          "name": "Prediction mkts",
+          "kind": "external",
+          "status": "external",
+          "sub": [
+            "event contracts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fetch",
+      "name": "Fetch",
+      "layout": "row",
+      "nodes": [
+        {
+          "id": "adapters",
+          "name": "Venue adapters",
+          "status": "planned",
+          "sub": [
+            "fetch only, store nothing"
+          ]
+        },
+        {
+          "id": "pacer",
+          "name": "Shared pacer",
+          "status": "live",
+          "sub": [
+            "one budget per venue",
+            "duplicate asks merged"
+          ],
+          "evidence": [
+            "database/py/fund_db/pacer.py"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "library",
+      "name": "Library",
+      "layout": "row",
+      "nodes": [
+        {
+          "id": "datalib",
+          "name": "Data library",
+          "status": "planned",
+          "sub": [
+            "cache first, then the venue",
+            "returns a handle"
+          ]
+        },
+        {
+          "id": "live",
+          "name": "Live streams",
+          "status": "planned",
+          "sub": [
+            "open on subscribe",
+            "stored nowhere"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kept",
+      "name": "Kept",
+      "layout": "row",
+      "nodes": [
+        {
+          "id": "cache",
+          "name": "Cache",
+          "status": "live",
+          "sub": [
+            "rebuildable, size capped",
+            "idle months evicted"
+          ],
+          "evidence": [
+            "database/py/fund_db/market/cache.py"
+          ],
+          "note": "CACHE class: the default for every read; safe to wipe"
+        },
+        {
+          "id": "pins",
+          "name": "Pins",
+          "status": "live",
+          "sub": [
+            "rows a result used",
+            "immutable"
+          ],
+          "evidence": [
+            "database/py/fund_db/market/pinning.py"
+          ],
+          "note": "PIN class: written by the loop and by studies"
+        },
+        {
+          "id": "archive",
+          "name": "Archive",
+          "status": "live",
+          "sub": [
+            "what no venue serves again",
+            "declared per venue"
+          ],
+          "evidence": [
+            "database/py/fund_db/market/storage.py",
+            "database/retention.toml"
+          ],
+          "note": "ARCHIVE class: what a venue will not serve again, declared per venue"
+        },
+        {
+          "id": "ops",
+          "name": "Ops store",
+          "status": "live",
+          "sub": [
+            "Postgres on 127.0.0.1",
+            "state, pacer, pin index"
+          ],
+          "evidence": [
+            "database/migrations"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "used",
+      "name": "Used by",
+      "layout": "row",
+      "nodes": [
+        {
+          "id": "notebooks",
+          "name": "Notebooks",
+          "status": "live",
+          "sub": [
+            "handle.load gives a frame"
+          ],
+          "evidence": [
+            "platform/research"
+          ]
+        },
+        {
+          "id": "mcp",
+          "name": "market MCP",
+          "status": "planned",
+          "sub": [
+            "md_* tools for agents",
+            "summary and handle"
+          ]
+        },
+        {
+          "id": "dashboards",
+          "name": "Dashboards",
+          "status": "planned",
+          "sub": [
+            "live plus cached history"
+          ]
+        },
+        {
+          "id": "loop",
+          "name": "The loop",
+          "status": "live",
+          "sub": [
+            "pins what a run read"
+          ],
+          "evidence": [
+            "app/loop/tools/pins.py"
+          ]
+        },
+        {
+          "id": "rooms",
+          "name": "Cockpit rooms",
+          "status": "live",
+          "sub": [
+            "Data, Lab"
+          ],
+          "evidence": [
+            "app/server/data"
+          ]
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "sources",
+      "to": "fetch",
+      "label": "HTTP, websocket, socket"
+    },
+    {
+      "from": "fetch",
+      "to": "library"
+    },
+    {
+      "from": "library",
+      "to": "kept",
+      "label": "cache first; archive only when declared"
+    },
+    {
+      "from": "kept",
+      "to": "used",
+      "label": "a handle id"
+    },
+    {
+      "from": "live",
+      "to": "dashboards",
+      "label": "live frames",
+      "kind": "uses"
+    },
+    {
+      "from": "loop",
+      "to": "pins",
+      "label": "pins its inputs",
+      "kind": "uses"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "$comment": "The System > Controls view's own settings (server/system/controlsfile.ts); every other control on that page edits a file that already had a home (board/config.json, loop/config.json, the roster, floor/STOP). wakes: false holds every dashboard on_fail wake. tokenCap: the daily billable-token ceiling per agent whose roster file writes none; null = no cap.",
+  "wakes": true,
+  "tokenCap": null
+}

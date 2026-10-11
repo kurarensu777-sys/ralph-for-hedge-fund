@@ -1,0 +1,97 @@
+# retention.toml - how long each lake dataset stays hot, and when it leaves; and the byte budget of
+# the CACHE. Read by fund_db.market.retention (and `python -m fund_db usage|tier|prune|cache`).
+#
+# STORAGE CLASSES (B-0322, the owner 2026-09-28): the LAKE (market/, tiering to cold/) holds the
+# ARCHIVE class only - a dataset whose default is archive (conflicts, snapshots) or a series a
+# venue.json declares archive (the reclassify moved the rest out on 2026-10-03). Everything a
+# venue serves again is CACHE class and lives under cache/, held to [cache] max_bytes by eviction
+# (least-recently-read month first; a real delete, the cache is rebuildable). PINS live under
+# pins/ and are never evicted, tiered or pruned. The [datasets.*] lines below govern the lake;
+# the cache is never tiered or pruned, only evicted.
+#
+#   keep_days        prune line: a month partition past it MOVES to <data root>/_retired/market/
+#                    (never deleted; only the owner frees _retired). 0 = keep forever. A settled-
+#                    history dataset (registry `archive=True`: funding, candles, contract_bars,
+#                    predmkt_bars, option_chains, eod, rates, conflicts, cb_*) may never set it - what of it the
+#                    lake holds is archive class.
+#   tier_after_days  tier line: a hot partition past it MOVES to tier_to, every file verified at the
+#                    destination before the source goes. 0 = never tier.
+#   tier_to          where tiered partitions go; relative paths are under the data root.
+#   class            the retention class the catalog carries: forever | rolling | ephemeral.
+#   compact_parts    a partition with more part files than this is compacted by the compaction job.
+#
+# A partition is due when its whole month is past the line. These are the starting values
+# (2026-09-25), a policy choice and not a measured optimum: settled history stays forever,
+# high-volume microstructure is rolling. The owner tunes them here; an unlisted dataset takes
+# [defaults]. An unknown dataset or key is refused by the loader.
+
+[cache]
+# the cache root's byte budget: 500 MB = 500,000,000 bytes (decimal), the owner's number (B-0335,
+# 2026-10-03; it was 2 GiB under B-0322). The cache is lean on purpose: anything a venue serves again
+# is pulled on demand, so keeping little is the design. It can be raised here; the doctor, the
+# node reader and the python default follow this one number. A write that takes the cache past it
+# evicts least-recently-read months at once; `python -m fund_db cache --evict` does the same by
+# hand, `cache --clean` (weekly) also evicts every month nobody read in 14 days, and the doctor
+# fails while the cache is over it.
+max_bytes = 500000000
+
+[defaults]
+keep_days = 0
+tier_after_days = 0
+tier_to = "cold"
+class = "forever"
+compact_parts = 8
+
+[datasets.candles]
+tier_after_days = 730
+
+[datasets.contract_bars]
+tier_after_days = 730
+
+[datasets.predmkt_bars]
+tier_after_days = 730
+
+# the central bank family (B-0541) is about 10 MB and stays hot and forever: nothing tiers or prunes
+[datasets.cb_docs]
+tier_after_days = 0
+
+[datasets.cb_meetings]
+tier_after_days = 0
+
+[datasets.cb_votes]
+tier_after_days = 0
+
+[datasets.cb_projections]
+tier_after_days = 0
+
+[datasets.cb_llm]
+tier_after_days = 0
+
+[datasets.options]
+tier_after_days = 365
+
+[datasets.option_chains]
+tier_after_days = 365
+
+[datasets.predmkts]
+tier_after_days = 365
+
+[datasets.snapshots]
+class = "rolling"
+tier_after_days = 90
+keep_days = 730
+
+[datasets.quotes]
+class = "rolling"
+tier_after_days = 30
+keep_days = 365
+
+[datasets.trades]
+class = "rolling"
+tier_after_days = 30
+keep_days = 365
+
+[datasets.orderbook]
+class = "ephemeral"
+tier_after_days = 7
+keep_days = 90

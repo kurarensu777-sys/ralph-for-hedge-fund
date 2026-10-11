@@ -1,0 +1,10 @@
+{
+  "$comment": "The board's own setting (server/board/config.ts), the owner's switches in the Board room's head. auto (Auto / Manual): true = fundd starts ready items labelled auto with their owner; false holds every pickup. model / effort: what every conversation the board starts boots on (auto-pickup and the drawer's Start), an exact id from Claude Code's permitted list; null = the owner agent's own roster model / effort. max: pickups running at once (1 to 8). perDay: pickups started per UTC day (1 to 40, absent = 10).",
+  "board": {
+    "auto": true,
+    "model": null,
+    "effort": null,
+    "max": 2,
+    "perDay": 10
+  }
+}

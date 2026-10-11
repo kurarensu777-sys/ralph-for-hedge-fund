@@ -1,0 +1,82 @@
+/* ROOM: context. Layout only; the kit owns colours, pills, meters, segs and states. */
+.context-main { height: 100%; display: flex; min-height: 0 }
+.context-body { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0 }
+.context-scroll { flex: 1; min-height: 0; overflow: auto }
+.context-warn { display: flex; align-items: center; gap: var(--s4); padding: var(--s4) var(--gutter); font: var(--fs-sm) var(--mono); color: var(--dim); border-bottom: 1px solid var(--line) }
+.context-key { flex: none; display: flex; flex-wrap: wrap; gap: var(--s2) var(--s7); align-items: center; padding: var(--s4) var(--gutter); border-top: 1px solid var(--line); font: var(--fs-xs) var(--mono) }
+.context-key .dot { margin-right: 5px }
+.context-arow .r { margin-left: auto }
+.context-arow.dormant { opacity: .55 }
+
+/* ---------- the matrix ---------- */
+.context-table { border-collapse: separate; border-spacing: 0; font-size: var(--fs-md); min-width: 100% }
+.context-table th, .context-table td { padding: 0; border-bottom: 1px solid var(--line); white-space: nowrap }
+.context-table thead th { position: sticky; top: 0; z-index: 3; background: var(--bg); border-bottom: 1px solid var(--line2) }
+.context-corner { left: 0; z-index: 4; min-width: 170px }
+.context-col { min-width: 62px; width: 62px }
+.context-col button { display: flex; flex-direction: column; align-items: center; gap: var(--s2); width: 100%; padding: var(--s4) 2px var(--s3); border: 0; background: none; color: var(--dim); cursor: pointer; font: var(--fs-xs) var(--mono) }
+.context-col button:hover { color: var(--text); background: var(--panel) }
+.context-col.on button { color: var(--text); background: var(--panel2); box-shadow: inset 0 -2px 0 var(--accent) }
+.context-col.dormant button { opacity: .5 }
+.context-col .nm { max-width: 64px; overflow: hidden; text-overflow: ellipsis }
+.context-grp th { text-align: left; padding: var(--s6) var(--gutter) var(--s3); font: 600 var(--fs-cap) var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); background: var(--bg); border-bottom: 1px solid var(--line) }
+.context-label { position: sticky; left: 0; z-index: 2; background: var(--bg); text-align: left; font-weight: 400; padding: 3px var(--gutter); max-width: 240px; overflow: hidden; text-overflow: ellipsis; color: var(--dim) }
+.context-label .mono { font-size: var(--fs-sm) }
+.context-shared { margin-left: var(--s4); font: var(--fs-cap) var(--mono); color: var(--faint); border: 1px solid var(--line2); border-radius: var(--r-xs); padding: 0 3px }
+.context-row:hover .context-label, .context-row:hover .context-cell { background: var(--panel) }
+.context-cell { text-align: center; font: var(--fs-sm) var(--mono); padding: 3px 4px; min-width: 62px; background: var(--bg) }
+.context-cell.ok { color: var(--text) }
+/* a tint is an image over the cell's own opaque colour, so a sticky footer cell still hides what scrolls under it */
+.context-cell.warn { color: var(--warn); background-image: linear-gradient(var(--warn-soft), var(--warn-soft)) }
+.context-cell.fail { color: var(--fail); background-image: linear-gradient(var(--fail-soft), var(--fail-soft)) }
+.context-cell.unk { color: var(--faint) }
+.context-cell.none { color: var(--line3) }
+.context-cell.dormant { color: var(--faint) }
+.context-cell .dot { margin-right: 3px }
+.context-none { padding: 30px var(--gutter); color: var(--faint); font: var(--fs-md) var(--mono) }
+.context-table tfoot th, .context-table tfoot td { position: sticky; bottom: 0; z-index: 3; background: var(--panel); border-top: 1px solid var(--line2); border-bottom: 0 }
+/* five footer rows stack at the bottom: each is a fixed height, so each offset is the sum of those under it */
+.context-foot td, .context-foot th { height: 34px }
+.context-foot.total td, .context-foot.total th { height: 28px }
+.context-table tfoot tr:nth-last-child(1) > * { bottom: 0 }
+.context-table tfoot tr:nth-last-child(2) > * { bottom: 28px }
+.context-table tfoot tr:nth-last-child(3) > * { bottom: 62px }
+.context-table tfoot tr:nth-last-child(4) > * { bottom: 96px }
+.context-table tfoot tr:nth-last-child(5) > * { bottom: 130px }
+.context-foot td { padding: 4px 6px }
+.context-foot .meter { display: block; margin: 3px auto 0; width: 44px }
+.context-foot.total td { font-weight: 600; color: var(--text) }
+
+/* ---------- the panel ---------- */
+.context-panel { flex: none; width: min(520px, 38%); min-width: 360px; border-left: 1px solid var(--line2); background: var(--bg2); display: flex; flex-direction: column; min-height: 0 }
+.context-phead { flex: none; display: flex; align-items: center; gap: var(--s4); padding: var(--s5) var(--gutter); border-bottom: 1px solid var(--line) }
+.context-pname { font: 600 var(--fs-lg) var(--sans); color: var(--text) }
+.context-x { margin-left: auto; font-size: var(--fs-xl) }
+.context-tabs { flex: none; display: flex; align-items: center; gap: var(--s6); padding: var(--s4) var(--gutter); border-bottom: 1px solid var(--line) }
+.context-dirty { font: var(--fs-xs) var(--mono); color: var(--accent) }
+.context-pbody { flex: 1; min-height: 0; overflow: auto; padding: var(--s6) var(--gutter); display: flex; flex-direction: column; gap: var(--s5) }
+.context-note { font: var(--fs-sm) var(--sans); color: var(--dim); line-height: 1.5 }
+.context-note .lnk { margin-left: var(--s4) }
+.context-pre { margin: 0; padding: var(--s5); background: var(--code); border: 1px solid var(--line); border-radius: var(--r); font: var(--fs-sm) / 1.55 var(--mono); color: var(--dim); white-space: pre-wrap; word-break: break-word; overflow: auto; flex: 1; min-height: 160px }
+.context-ta { width: 100%; min-height: 150px; resize: vertical; background: var(--code); border: 1px solid var(--line2); border-radius: var(--r); color: var(--text); font: var(--fs-sm) / 1.55 var(--mono); padding: var(--s5); outline: none }
+.context-ta:focus { border-color: var(--accent-line) }
+.context-count { display: flex; align-items: center; gap: var(--s5); font: var(--fs-xs) var(--mono) }
+.context-diff { border: 1px solid var(--line); border-radius: var(--r); background: var(--code); font: var(--fs-sm) / 1.5 var(--mono); overflow: auto; max-height: 260px }
+.context-d { display: flex; gap: var(--s4); padding: 0 var(--s5); white-space: pre-wrap; word-break: break-word }
+.context-d > span { flex: none; width: 8px; color: var(--faint) }
+.context-d.add { background: var(--ok-soft); color: var(--ok) }
+.context-d.del { background: var(--fail-soft); color: var(--fail) }
+.context-gap { padding: 0 var(--s5); color: var(--faint) }
+.context-k { margin-top: var(--s4) }
+.context-list { display: flex; flex-direction: column }
+.context-brow { display: flex; align-items: center; gap: var(--s4); padding: 3px var(--s3); border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--dim); font: var(--fs-sm) var(--sans); text-align: left; width: 100%; cursor: default; min-width: 0 }
+.context-brow.add { cursor: pointer }
+.context-brow.add:hover { background: var(--panel); color: var(--text) }
+.context-brow.added { background: var(--ok-soft) }
+.context-brow .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.context-plus { color: var(--accent); font: var(--fs-md) var(--mono) }
+.context-find { flex: none }
+.context-f { display: flex; flex-direction: column; gap: var(--s3) }
+.context-savebar { flex: none; display: flex; align-items: center; gap: var(--s5); justify-content: flex-end; padding: var(--s4) var(--gutter); border-top: 1px solid var(--line2); background: var(--panel); font: var(--fs-xs) var(--mono) }
+.context-savebar > :first-child { margin-right: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis }
+.context-saved { flex: none; padding: var(--s4) var(--gutter); border-top: 1px solid var(--line); font: var(--fs-xs) var(--mono); color: var(--dim); display: flex; flex-wrap: wrap; gap: 0 var(--s4); align-items: baseline }
